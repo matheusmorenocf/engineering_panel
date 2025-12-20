@@ -1,0 +1,75 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dataPanelEng}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - painel_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+      - backend_media:/app/media
+      - backend_static:/app/static
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_ENV: dev
+      DJANGO_DEBUG: "1"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me-in-dev}
+      DATABASE_NAME: ${POSTGRES_DB:-dataPanelEng}
+      DATABASE_USER: ${POSTGRES_USER:-postgres}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DATABASE_HOST: db
+      DATABASE_PORT: "5432"
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://frontend:3000}
+    depends_on:
+      - db
+    networks:
+      - painel_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: npm run dev -- --webpack
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:8000}
+      WATCHPACK_POLLING: "true"
+      WATCHPACK_POLL_INTERVAL: "1000"
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "1000"
+    depends_on:
+      - backend
+    networks:
+      - painel_network
+
+volumes:
+  postgres_data:
+  backend_media:
+  backend_static:
+
+networks:
+  painel_network:
+    driver: bridge

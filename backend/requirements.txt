@@ -1,0 +1,33 @@
+# Django Core
+Django==5.0.1
+django-environ
+
+# Django REST Framework
+djangorestframework
+djangorestframework-simplejwt
+
+# CORS
+django-cors-headers
+
+# Database Drivers
+psycopg2-binary
+pyodbc==5.0.1
+mssql-django==1.5
+
+# O restante das suas bibliotecas...
+Pillow
+python-dateutil
+pytz
+django-phonenumber-field
+phonenumbers
+openpyxl
+pandas
+drf-yasg
+django-storages
+django-allauth
+cryptography
+python-slugify
+django-filter
+whitenoise>=6.0.0
+gunicorn>=21.2
+SQLAlchemy>=2.0
