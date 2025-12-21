@@ -1,8 +1,7 @@
-"""Development settings."""
-from .base import *  # noqa
+from .base import *
+
+# ATENÇÃO: Isso é crucial para o Docker. 
+# "*" permite que o container do frontend acesse o backend.
+ALLOWED_HOSTS = ["*"] 
 
 DEBUG = True
-ALLOWED_HOSTS = ["*"]
-
-# Convenience defaults for local/dev
-DATABASES["default"]["PASSWORD"] = DATABASES["default"]["PASSWORD"] or "postgres"

@@ -8,7 +8,6 @@ async function proxyRequest(request: Request, { params }: { params: { slug: stri
   
   const body = method !== 'GET' ? await request.json() : undefined;
 
-  // Comunicação Interna
   const internalUrl = `http://backend:8000/api/catalog/management/${path}/?${searchParams.toString()}`;
 
   try {

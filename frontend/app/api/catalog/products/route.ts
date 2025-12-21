@@ -5,7 +5,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const token = request.headers.get('Authorization');
 
-    // Comunicação Interna: Next.js -> Docker Backend
+    // CONEXÃO CRÍTICA: O container 'frontend' chama o container 'backend' na porta 8000
     const internalUrl = `http://backend:8000/api/catalog/products/?${searchParams.toString()}`;
 
     const res = await fetch(internalUrl, {
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     });
 
     if (!res.ok) {
-        return NextResponse.json({ error: 'Erro no Django' }, { status: res.status });
+        return NextResponse.json({ error: 'Erro no Backend Django' }, { status: res.status });
     }
 
     const data = await res.json();
@@ -25,6 +25,6 @@ export async function GET(request: Request) {
 
   } catch (error) {
     console.error("Erro Proxy:", error);
-    return NextResponse.json({ error: "Falha na comunicação interna" }, { status: 502 });
+    return NextResponse.json({ error: "Falha na comunicação interna do Docker" }, { status: 502 });
   }
 }
