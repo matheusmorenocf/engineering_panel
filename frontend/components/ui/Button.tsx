@@ -1,50 +1,16 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
-  isLoading?: boolean;
 }
 
-export default function Button({
-  variant = 'primary',
-  size = 'md',
-  children,
-  isLoading = false,
-  className = '',
-  disabled,
-  ...props
-}: ButtonProps) {
-  const baseClasses = 'btn';
-  
-  const variantClasses = {
-    primary: 'btn-primary',
-    secondary: 'btn-secondary',
-    outline: 'btn-outline',
-    ghost: 'btn-ghost',
-  };
-  
-  const sizeClasses = {
-    sm: 'btn-sm',
-    md: '',
-    lg: 'btn-lg',
-  };
-  
+export default function Button({ children, className, ...props }: ButtonProps) {
   return (
-    <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
-      disabled={disabled || isLoading}
+    <button 
       {...props}
+      className={`w-full bg-secondary hover:bg-secondary-dark text-white py-4 rounded-lg font-bold tracking-widest transition-all uppercase text-xs shadow-md mt-2 cursor-pointer active:scale-[0.98] ${className}`}
     >
-      {isLoading ? (
-        <>
-          <span className="spinner" />
-          Carregando...
-        </>
-      ) : (
-        children
-      )}
+      {children}
     </button>
   );
 }
