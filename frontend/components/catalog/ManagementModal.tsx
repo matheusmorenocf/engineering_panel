@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, X, Loader2 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
-
-// Ajuste a URL se estiver usando Docker no Windows
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface Item {
   id: number;
@@ -29,11 +27,19 @@ export const ManagementModal = ({ isOpen, onClose }: { isOpen: boolean; onClose:
     try {
       const token = localStorage.getItem('access_token');
       const endpoint = mode === 'setor' ? 'sectors' : 'types';
-      const res = await fetch(`${API_BASE_URL}/api/catalog/management/${endpoint}/`, {
+      
+      // ✅ CORRETO: Usa Route Handler do Next.js
+      const res = await apiFetch(`/api/catalog/management/${endpoint}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) setItems(await res.json());
+      
+      if (res.ok) {
+        setItems(await res.json());
+      } else {
+        console.error('Erro ao carregar lista:', res.status);
+      }
     } catch (error) {
+      console.error('Erro ao carregar lista:', error);
       addToast("Erro ao carregar lista", "error");
     } finally {
       setLoading(false);
@@ -42,11 +48,13 @@ export const ManagementModal = ({ isOpen, onClose }: { isOpen: boolean; onClose:
 
   const handleAdd = async () => {
     if (!inputValue.trim()) return;
+    
     try {
       const token = localStorage.getItem('access_token');
       const endpoint = mode === 'setor' ? 'sectors' : 'types';
       
-      const res = await fetch(`${API_BASE_URL}/api/catalog/management/${endpoint}/`, {
+      // ✅ CORRETO: Usa Route Handler do Next.js
+      const res = await apiFetch(`/api/catalog/management/${endpoint}`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -60,30 +68,39 @@ export const ManagementModal = ({ isOpen, onClose }: { isOpen: boolean; onClose:
         setInputValue('');
         fetchItems();
       } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Erro ao criar item:', errorData);
         addToast("Erro ao criar item", "error");
       }
     } catch (error) {
-      console.error(error);
+      console.error('Erro ao criar item:', error);
+      addToast("Erro de conexão", "error");
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Tem certeza que deseja excluir?")) return;
+    
     try {
       const token = localStorage.getItem('access_token');
       const endpoint = mode === 'setor' ? 'sectors' : 'types';
       
-      const res = await fetch(`${API_BASE_URL}/api/catalog/management/${endpoint}/${id}/`, {
+      // ✅ CORRETO: Usa Route Handler do Next.js
+      const res = await apiFetch(`/api/catalog/management/${endpoint}/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      if (res.ok) {
+      if (res.ok || res.status === 204) {
         addToast("Item removido", "success");
         fetchItems();
+      } else {
+        console.error('Erro ao deletar:', res.status);
+        addToast("Erro ao deletar", "error");
       }
     } catch (error) {
-      addToast("Erro ao deletar", "error");
+      console.error('Erro ao deletar:', error);
+      addToast("Erro de conexão", "error");
     }
   };
 

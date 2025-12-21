@@ -5,6 +5,8 @@ import { Lock, Loader2, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import { apiFetch } from '@/lib/apiFetch';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -12,15 +14,16 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
+  const { refreshUser } = useAuth()
+  
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      // Chamada para o endpoint de token do Django
-      const response = await fetch('/api/token/', {
+      // Chamada para o Route Handler do Next.js
+      const response = await apiFetch('/api/token/', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -32,29 +35,23 @@ export default function LoginForm() {
         }),
       });
 
-      const contentType = response.headers.get("content-type");
-      
-      // Proteção contra erros de sistema (HTML) do Django
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Erro interno no servidor. Verifique as migrações do banco de dados.");
-      }
-
       const data = await response.json();
 
       if (response.ok) {
-        // Salva os tokens JWT conforme configurado no SimpleJWT
+        // Salva os tokens JWT
         localStorage.setItem('access_token', data.access);
         localStorage.setItem('refresh_token', data.refresh);
         
-        // Redireciona para o dashboard
+        
+        await refreshUser();
         router.push('/dashboard');
       } else {
-        // Erro de credenciais (ex: usuário ou senha inválidos)
-        setError(data.detail || 'Usuário ou senha incorretos.');
+        // Exibe o erro real vindo do Django ou do Proxy
+        setError(data.detail || data.error || 'Usuário ou senha incorretos.');
       }
     } catch (err: any) {
       console.error("Erro no processo de login:", err);
-      setError(err.message || 'Falha na conexão com o servidor.');
+      setError('Falha crítica na conexão com o servidor de autenticação.');
     } finally {
       setLoading(false);
     }

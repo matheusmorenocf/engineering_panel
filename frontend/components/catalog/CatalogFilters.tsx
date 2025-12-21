@@ -4,17 +4,14 @@ import { Search, Settings2, Layers, Tag, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/context/ToastContext';
 
-// USANDO A VARIÁVEL DE AMBIENTE
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-
 interface CatalogFiltersProps {
   filters: {
     codigo: string;
     descricao: string;
     desenho: string;
     cliente: string;
-    sectors: number[]; // Array de IDs
-    types: number[];   // Array de IDs
+    sectors: number[];
+    types: number[];
   };
   setFilters: (filters: any) => void;
   onOpenManagement: () => void;
@@ -31,55 +28,73 @@ export const CatalogFilters = ({ filters, setFilters, onOpenManagement }: Catalo
   const [loading, setLoading] = useState(true);
   const { addToast } = useToast();
 
-  // 1. Carregar opções do Backend
   useEffect(() => {
     const fetchOptions = async () => {
-      if (!API_BASE_URL) {
-        console.error("NEXT_PUBLIC_API_URL não definida!");
-        return;
-      }
-
       try {
         const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}` };
 
+        console.log('[FILTERS] Fetching sectors and types...');
+
         const [secRes, typRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/catalog/management/sectors/`, { headers }),
-          fetch(`${API_BASE_URL}/api/catalog/management/types/`, { headers })
+          fetch('/api/catalog/management/sectors', { headers }),
+          fetch('/api/catalog/management/types', { headers })
         ]);
 
+        console.log('[FILTERS] Response status:', { 
+          sectors: secRes.status, 
+          types: typRes.status 
+        });
+
         if (secRes.ok && typRes.ok) {
-          setSectorsOptions(await secRes.json());
-          setTypesOptions(await typRes.json());
+          const sectors = await secRes.json();
+          const types = await typRes.json();
+          
+          setSectorsOptions(sectors);
+          setTypesOptions(types);
+          
+          console.log('[FILTERS] Loaded:', { 
+            sectors: sectors.length, 
+            types: types.length 
+          });
+        } else {
+          // ✅ CORREÇÃO: Tratamento de erro mais robusto
+          const secError = !secRes.ok ? await secRes.text().catch(() => 'Erro desconhecido') : null;
+          const typError = !typRes.ok ? await typRes.text().catch(() => 'Erro desconhecido') : null;
+          
+          console.error('[FILTERS] Error loading filters:', { 
+            sectorsStatus: secRes.status,
+            typesStatus: typRes.status,
+            sectorsError: secError,
+            typesError: typError
+          });
+          
+          addToast('Erro ao carregar filtros', 'warning');
         }
       } catch (error) {
-        console.error("Erro ao carregar filtros", error);
-        // Não mostramos toast de erro aqui para não poluir a tela se falhar silenciosamente
+        console.error("[FILTERS] Fatal error:", error);
+        addToast('Erro de conexão ao carregar filtros', 'error');
       } finally {
         setLoading(false);
       }
     };
+    
     fetchOptions();
-  }, []);
+  }, [addToast]);
 
   const handleInputChange = (field: string, value: string) => {
     setFilters((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  // 2. Lógica de Toggle (Adicionar/Remover do Array)
   const toggleFilter = (id: number, field: 'sectors' | 'types') => {
     setFilters((prev: any) => {
       const currentList = prev[field] || [];
       const exists = currentList.includes(id);
       
-      let newList;
-      if (exists) {
-        // Remove se já existe
-        newList = currentList.filter((item: number) => item !== id);
-      } else {
-        // Adiciona se não existe
-        newList = [...currentList, id];
-      }
+      const newList = exists 
+        ? currentList.filter((item: number) => item !== id)
+        : [...currentList, id];
+      
       return { ...prev, [field]: newList };
     });
   };
@@ -174,6 +189,14 @@ export const CatalogFilters = ({ filters, setFilters, onOpenManagement }: Catalo
                       </button>
                     );
                   })}
+                </div>
+              )}
+              
+              {/* Mensagem se não houver filtros cadastrados */}
+              {!loading && sectorsOptions.length === 0 && typesOptions.length === 0 && (
+                <div className="text-center py-4 text-text-tertiary text-xs">
+                  <p className="font-bold uppercase">Nenhum filtro cadastrado</p>
+                  <p className="mt-1">Clique em &quot;Gerenciar Filtros&quot; para adicionar</p>
                 </div>
               )}
             </>

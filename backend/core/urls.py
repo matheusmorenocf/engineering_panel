@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
+from userprefs.models import UserPreferences
 
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
@@ -16,7 +17,12 @@ def get_user_profile(request):
     user_perms = []
     if request.user.is_authenticated:
         for perm in request.user.get_all_permissions():
-            user_perms.append(perm.split('.')[-1])
+            user_perms.append(perm)
+
+    prefs_obj, _ = UserPreferences.objects.get_or_create(
+    user=request.user,
+    defaults={"data": {}}
+    )
 
     return Response({
         'id': request.user.id,
@@ -25,7 +31,8 @@ def get_user_profile(request):
         'is_staff': request.user.is_staff,
         'is_superuser': request.user.is_superuser,
         'permissions': user_perms,
-        'groups': list(request.user.groups.values_list('name', flat=True))
+        'groups': list(request.user.groups.values_list('name', flat=True)),
+        'preferences': prefs_obj.data or {}
     })
 
 urlpatterns = [
@@ -41,4 +48,6 @@ urlpatterns = [
     # ROTAS DO CATÁLOGO E GESTÃO
     # O include delega para o backend/catalog/urls.py
     path('api/catalog/', include('catalog.urls')),
+
+    path("api/preferences/", include("userprefs.urls")),
 ]

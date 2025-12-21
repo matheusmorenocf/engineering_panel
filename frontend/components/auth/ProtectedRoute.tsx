@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -28,7 +29,7 @@ export default function ProtectedRoute({ children, permission }: ProtectedRouteP
           return;
         }
 
-        const response = await fetch('/api/user/me/', {
+        const response = await apiFetch('/api/user/me/', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 

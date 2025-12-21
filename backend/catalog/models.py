@@ -1,8 +1,10 @@
 from django.db import models
 from drawings.models import Drawing
 
-# 1. Modelos de Apoio (Devem vir antes do Produto)
+# ===== MODELOS DE APOIO =====
+
 class Sector(models.Model):
+    """Setores para categorização de produtos"""
     name = models.CharField(max_length=100, unique=True, verbose_name="Nome do Setor")
     description = models.TextField(blank=True, null=True, verbose_name="Descrição")
 
@@ -12,8 +14,11 @@ class Sector(models.Model):
     class Meta:
         verbose_name = "Setor"
         verbose_name_plural = "Setores"
+        ordering = ['name']
+
 
 class ProductType(models.Model):
+    """Tipos de produtos para categorização"""
     name = models.CharField(max_length=100, unique=True, verbose_name="Tipo de Produto")
 
     def __str__(self):
@@ -22,9 +27,16 @@ class ProductType(models.Model):
     class Meta:
         verbose_name = "Tipo de Produto"
         verbose_name_plural = "Tipos de Produtos"
+        ordering = ['name']
 
-# 2. Modelo Principal de Produto
+
+# ===== MODELO PRINCIPAL =====
+
 class Product(models.Model):
+    """
+    Associação entre Desenho, Setor e Tipo.
+    Usado para filtrar produtos do Protheus por categoria.
+    """
     drawing = models.ForeignKey(
         Drawing, 
         on_delete=models.CASCADE, 
@@ -53,14 +65,59 @@ class Product(models.Model):
     class Meta:
         verbose_name = "Produto"
         verbose_name_plural = "Catálogo de Produtos"
+        unique_together = [['drawing', 'sector', 'product_type']]  # ✅ Evita duplicatas
+        ordering = ['-created_at']
 
-# 3. Modelo Legado (Protheus)
+
+# ===== MODELO LEGADO (PROTHEUS) =====
+
 class SB1010(models.Model):
-    b1_cod = models.CharField(max_length=30, db_column='B1_COD', primary_key=True)
-    b1_desc = models.CharField(max_length=100, db_column='B1_DESC')
-    b1_desenho = models.CharField(max_length=50, db_column='B1_DESENHO')
-    deleted = models.CharField(max_length=1, db_column='D_E_L_E_T_', default='')
+    """
+    Tabela SB1010 do Protheus (Read-Only).
+    Contém produtos cadastrados no ERP.
+    
+    IMPORTANTE: Esta tabela usa campos com nomes específicos do Protheus (B1_*).
+    """
+    b1_cod = models.CharField(
+        max_length=30, 
+        db_column='B1_COD', 
+        primary_key=True,
+        verbose_name="Código do Produto"
+    )
+    
+    b1_desc = models.CharField(
+        max_length=100, 
+        db_column='B1_DESC',
+        verbose_name="Descrição"
+    )
+    
+    b1_desenho = models.CharField(
+        max_length=50, 
+        db_column='B1_DESENHO',
+        verbose_name="Código do Desenho",
+        db_index=True  # ✅ Index para melhor performance
+    )
+    
+    # ✅ CORREÇÃO CRÍTICA: Nome do campo no Protheus
+    # A coluna real no banco é 'D_E_L_E_T_' (com underscores)
+    deleted = models.CharField(
+        max_length=1, 
+        db_column='D_E_L_E_T_',  # ✅ Nome correto da coluna
+        default='',
+        verbose_name="Registro Deletado",
+        db_index=True  # ✅ Index para filtros rápidos
+    )
+
+    def __str__(self):
+        return f"{self.b1_cod} - {self.b1_desc}"
 
     class Meta:
-        managed = False
-        db_table = 'sb1010'
+        managed = False  # ✅ Django não gerencia essa tabela
+        db_table = 'sb1010'  # ✅ Nome exato da tabela no banco
+        verbose_name = "Produto Protheus"
+        verbose_name_plural = "Produtos Protheus (SB1010)"
+        
+        # ✅ Indexes compostos para melhor performance
+        indexes = [
+            models.Index(fields=['b1_desenho', 'deleted'], name='idx_desenho_deleted'),
+        ]

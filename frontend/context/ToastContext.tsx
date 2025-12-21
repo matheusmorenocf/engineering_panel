@@ -24,7 +24,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const id = Date.now();
     setToasts((prev) => [...prev, { id, message, type }]);
 
-    // O TEMPO É CONFIGURADO AQUI (5000ms = 5 segundos)
+    // O TEMPO É CONFIGURADO AQUI (3000ms = 3 segundos)
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, 3000);
@@ -39,7 +39,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       {children}
       
       {/* CONTAINER: Centralizado no topo com largura reduzida (max-w-xs) */}
-      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 w-full max-w-xs px-4 pointer-events-none">
+      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-9999 flex flex-col gap-3 w-full max-w-xs px-4 pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}

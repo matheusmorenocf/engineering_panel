@@ -22,7 +22,7 @@ export default function DashboardPage() {
        - max-w-[1920px] para telas ultra-wide
        - p-6 lg:p-10 para igualar ao espaçamento do Catálogo
     */
-    <div className="w-full max-w-[1920px] flex flex-col gap-8 fade-in p-6 lg:p-10">
+    <div className="w-full max-w-480 flex flex-col gap-8 fade-in p-6 lg:p-10">
       
       <header className="flex flex-col gap-1">
         <h1 className="text-4xl font-black text-text-primary uppercase italic tracking-tighter">

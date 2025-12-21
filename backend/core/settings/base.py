@@ -13,7 +13,6 @@ DJANGO_ENV = os.environ.get("DJANGO_ENV", "dev").lower()
 def _getenv_required(name: str) -> str:
     val = os.environ.get(name)
     if not val:
-        # Se estiver em DEV, não vamos travar o servidor com RuntimeError
         if DJANGO_ENV == "dev":
             return "dev-fallback-value"
         raise RuntimeError(f"Missing required environment variable: {name}")
@@ -26,20 +25,27 @@ DJANGO_SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or os.environ.get("SECRE
 if DJANGO_ENV == "prod":
     SECRET_KEY = _getenv_required("DJANGO_SECRET_KEY")
 else:
-    # dev fallback to keep local quickstart smooth
     SECRET_KEY = DJANGO_SECRET_KEY or "dev-secret-key-change-me"
-
-CORS_ALLOW_ALL_ORIGINS = True
 
 DEBUG = os.environ.get("DJANGO_DEBUG", os.environ.get("DEBUG", "0")) in ("1", "True", "true", "YES", "yes")
 
+# ✅ CORREÇÃO DOCKER: Permitir acesso do frontend
 ALLOWED_HOSTS = ['*']
 
 # =========================================================
-# Applications
+# CORS - CONFIGURAÇÃO DOCKER
 # =========================================================
-APPEND_SLASH = False
+# ✅ Em Docker, o frontend chama o backend pelo nome do container
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",      # Acesso do navegador local
+    "http://frontend:3000",       # Container frontend (interno)
+    "http://127.0.0.1:3000",      # Fallback
+]
 
+# ✅ CRÍTICO: Permitir credenciais (JWT)
+CORS_ALLOW_CREDENTIALS = True
+
+# ✅ Headers necessários para JWT
 CORS_ALLOW_HEADERS = [
     "accept",
     "accept-encoding",
@@ -51,6 +57,21 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
 ]
+
+# ✅ Métodos HTTP permitidos
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
+
+# =========================================================
+# Applications
+# =========================================================
+APPEND_SLASH = False  # ✅ Remove trailing slash automático
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -67,15 +88,18 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_yasg",
     "django_filters",
+    
+    # Local apps
     'drawings.apps.DrawingsConfig',
     'orders.apps.OrdersConfig',
     'catalog.apps.CatalogConfig',
+    'userprefs.apps.UserprefsConfig',
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",  # ✅ CORS antes do CommonMiddleware
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -106,16 +130,17 @@ WSGI_APPLICATION = "core.wsgi.application"
 ASGI_APPLICATION = "core.asgi.application"
 
 # =========================================================
-# Database
+# Database - CONFIGURAÇÃO DOCKER
 # =========================================================
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.environ.get("DATABASE_NAME", "dataPanelEng"),
-        "USER": os.environ.get("DATABASE_USER", "postgres"),
-        "PASSWORD": os.environ.get("DATABASE_PASSWORD", ""),
-        "HOST": os.environ.get("DATABASE_HOST", "db"),
+        "USER": os.environ.get("DATABASE_USER", "mestre"),
+        "PASSWORD": os.environ.get("DATABASE_PASSWORD", "35jsJL9d"),
+        "HOST": os.environ.get("DATABASE_HOST", "db"),  # ✅ Nome do container no Docker
         "PORT": os.environ.get("DATABASE_PORT", "5432"),
+        "CONN_MAX_AGE": 600,  # ✅ Pool de conexões
     }
 }
 
@@ -159,6 +184,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    # ✅ Paginação padrão
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 100,
 }
 
 SIMPLE_JWT = {
@@ -171,22 +199,14 @@ SIMPLE_JWT = {
 }
 
 # =========================================================
-# CORS
-# =========================================================
-CORS_ALLOWED_ORIGINS = os.environ.get(
-    "CORS_ALLOWED_ORIGINS",
-    "http://localhost:3000,http://frontend:3000",
-).split(",")
-
-# =========================================================
-# Logging
+# Logging - CONFIGURAÇÃO DOCKER
 # =========================================================
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "format": "[{levelname}] {asctime} {name} {message}",
             "style": "{",
         },
     },
@@ -204,6 +224,11 @@ LOGGING = {
         "django": {
             "handlers": ["console"],
             "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+        "catalog": {  # ✅ Log específico do app
+            "handlers": ["console"],
+            "level": "DEBUG",
             "propagate": False,
         },
     },

@@ -1,82 +1,142 @@
 "use client";
 
-import Sidebar from '@/components/layout/Sidebard';
-import React, { useState, useEffect } from 'react';
+import Sidebar from "@/components/layout/Sidebard";
+import { apiFetch } from "@/lib/apiFetch";
+import React, { useState, useEffect } from "react";
 
-// Definição dos tipos de temas de cores disponíveis
-export type ColorTheme = 'default' | 'emerald' | 'amber' | 'ruby' | 'amethyst';
+export type ColorTheme = "default" | "emerald" | "amber" | "ruby" | "amethyst";
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  // Estados de controle da interface
+type UserPreferences = {
+  colorMode?: "light" | "dark" | "system";
+  theme?: ColorTheme;
+};
+
+function applyTheme(theme: "light" | "dark") {
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
+function applyColorTheme(color: ColorTheme) {
+  document.documentElement.setAttribute("data-color-theme", color);
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('light');
-  const [colorTheme, setColorTheme] = useState<ColorTheme>('default');
+  const [currentTheme, setCurrentTheme] = useState<"light" | "dark">("light");
+  const [colorTheme, setColorTheme] = useState<ColorTheme>("default");
 
-  // Inicialização: Tenta recuperar preferências salvas no navegador
   useEffect(() => {
-    // Recupera do localStorage
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
-    const savedColor = localStorage.getItem('colorTheme') as ColorTheme;
-    
-    // CORREÇÃO: Usar setAttribute em vez de classList para o Tema Escuro
-    if (savedTheme) {
-      setCurrentTheme(savedTheme);
-      document.documentElement.setAttribute('data-theme', savedTheme);
-    } else {
-      // Define um padrão se não houver nada salvo
-      document.documentElement.setAttribute('data-theme', 'light');
+    // 1) aplica cache local imediatamente (sem flicker)
+    try {
+      const raw = localStorage.getItem("userPreferences");
+      if (raw) {
+        const prefs = JSON.parse(raw) as UserPreferences;
+
+        // dark/light
+        const savedMode = prefs.colorMode;
+        if (savedMode === "dark" || savedMode === "light") {
+          setCurrentTheme(savedMode);
+          applyTheme(savedMode);
+        } else {
+          applyTheme("light");
+        }
+
+        // cor
+        if (prefs.theme) {
+          setColorTheme(prefs.theme);
+          applyColorTheme(prefs.theme);
+        } else {
+          applyColorTheme("default");
+        }
+      } else {
+        // padrão se não houver cache
+        applyTheme("light");
+        applyColorTheme("default");
+      }
+    } catch {
+      applyTheme("light");
+      applyColorTheme("default");
     }
-    
-    // Aplica a cor do tema
-    if (savedColor) {
-      setColorTheme(savedColor);
-      document.documentElement.setAttribute('data-color-theme', savedColor);
+
+    // 2) sincroniza com o backend (banco)
+    async function syncFromBackend() {
+      const token = localStorage.getItem("access_token");
+      if (!token) return;
+
+      const res = await apiFetch("/api/user/me", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json().catch(() => ({}));
+      const prefs: UserPreferences = data?.preferences || {};
+
+      // salva no cache local para próximo load (e para o script do RootLayout)
+      localStorage.setItem("userPreferences", JSON.stringify(prefs));
+
+      // aplica tema claro/escuro
+      if (prefs.colorMode === "dark" || prefs.colorMode === "light") {
+        setCurrentTheme(prefs.colorMode);
+        applyTheme(prefs.colorMode);
+      }
+
+      // aplica cor
+      if (prefs.theme) {
+        setColorTheme(prefs.theme);
+        applyColorTheme(prefs.theme);
+      }
     }
+
+    syncFromBackend();
   }, []);
 
-  // Alternar entre modo claro e escuro
+  // Alternar claro/escuro (a UI muda na hora; o UserMenu já faz PATCH e salva no banco)
   const toggleTheme = () => {
-    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-    
-    // Atualiza estado e storage
+    const newTheme = currentTheme === "light" ? "dark" : "light";
     setCurrentTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    
-    // CORREÇÃO: Atualiza o atributo no HTML para ativar o CSS [data-theme="dark"]
-    document.documentElement.setAttribute('data-theme', newTheme);
+    applyTheme(newTheme);
+
+    // mantém cache local coerente
+    try {
+      const raw = localStorage.getItem("userPreferences");
+      const prefs = raw ? (JSON.parse(raw) as UserPreferences) : {};
+      prefs.colorMode = newTheme;
+      localStorage.setItem("userPreferences", JSON.stringify(prefs));
+    } catch {}
   };
 
-  // Alterar o tema de cor (azul, verde, amarelo, etc)
+  // Alterar tema de cor (UI + cache local; backend salva via UserMenu)
   const handleSetColorTheme = (theme: ColorTheme) => {
     setColorTheme(theme);
-    localStorage.setItem('colorTheme', theme);
-    
-    // Mantém a lógica correta que já existia para cor
-    document.documentElement.setAttribute('data-color-theme', theme);
+    applyColorTheme(theme);
+
+    try {
+      const raw = localStorage.getItem("userPreferences");
+      const prefs = raw ? (JSON.parse(raw) as UserPreferences) : {};
+      prefs.theme = theme;
+      localStorage.setItem("userPreferences", JSON.stringify(prefs));
+    } catch {}
   };
 
   return (
     <div className="flex min-h-screen bg-bg antialiased transition-colors duration-300">
-      
-      {/* Sidebar Fixa */}
-      <Sidebar 
-        isCollapsed={isCollapsed} 
-        setIsCollapsed={setIsCollapsed} 
+      <Sidebar
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
         toggleTheme={toggleTheme}
         currentTheme={currentTheme}
         setColorTheme={handleSetColorTheme}
         currentColorTheme={colorTheme}
       />
-      
-      {/* Área de Conteúdo Principal */}
-      <main 
+
+      <main
         className={`
           flex-1 flex flex-col min-w-0 transition-all duration-300
-          ${isCollapsed ? 'ml-20' : 'ml-64'}
+          ${isCollapsed ? "ml-20" : "ml-64"}
         `}
       >
         <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
