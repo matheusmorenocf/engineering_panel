@@ -13,6 +13,9 @@ DJANGO_ENV = os.environ.get("DJANGO_ENV", "dev").lower()
 def _getenv_required(name: str) -> str:
     val = os.environ.get(name)
     if not val:
+        # Se estiver em DEV, não vamos travar o servidor com RuntimeError
+        if DJANGO_ENV == "dev":
+            return "dev-fallback-value"
         raise RuntimeError(f"Missing required environment variable: {name}")
     return val
 
