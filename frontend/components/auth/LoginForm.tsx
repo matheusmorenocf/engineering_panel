@@ -19,32 +19,42 @@ export default function LoginForm() {
     setError('');
 
     try {
-      // Chamada POST para a rota que você validou
+      // Chamada para o endpoint de token do Django
       const response = await fetch('/api/token/', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Accept': 'application/json' 
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ 
+          username: username.trim(), 
+          password: password 
+        }),
       });
+
+      const contentType = response.headers.get("content-type");
+      
+      // Proteção contra erros de sistema (HTML) do Django
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Erro interno no servidor. Verifique as migrações do banco de dados.");
+      }
 
       const data = await response.json();
 
       if (response.ok) {
-        // Armazena os tokens JWT retornados (access e refresh)
+        // Salva os tokens JWT conforme configurado no SimpleJWT
         localStorage.setItem('access_token', data.access);
         localStorage.setItem('refresh_token', data.refresh);
         
-        // Redireciona para o dashboard após o sucesso
+        // Redireciona para o dashboard
         router.push('/dashboard');
       } else {
-        // Trata erro de credenciais inválidas (conforme o JSON de erro do Django)
+        // Erro de credenciais (ex: usuário ou senha inválidos)
         setError(data.detail || 'Usuário ou senha incorretos.');
       }
     } catch (err: any) {
-      console.error("Erro na autenticação:", err);
-      setError('Não foi possível conectar ao servidor de engenharia.');
+      console.error("Erro no processo de login:", err);
+      setError(err.message || 'Falha na conexão com o servidor.');
     } finally {
       setLoading(false);
     }
@@ -54,10 +64,9 @@ export default function LoginForm() {
     <div className="w-full shadow-2xl border border-border bg-surface rounded-lg p-8">
       <form onSubmit={handleLogin} className="flex flex-col gap-6">
         
-        {/* Campo Usuário */}
         <div className="flex flex-col gap-2">
           <label className="text-[10px] font-bold text-text-primary uppercase tracking-widest ml-1">
-            Usuário do Sistema
+            Usuário
           </label>
           <Input 
             type="text" 
@@ -68,10 +77,9 @@ export default function LoginForm() {
           />
         </div>
 
-        {/* Campo Senha */}
         <div className="flex flex-col gap-2">
           <label className="text-[10px] font-bold text-text-primary uppercase tracking-widest ml-1">
-            Senha de Acesso
+            Senha
           </label>
           <div className="relative">
             <Input 
@@ -85,11 +93,10 @@ export default function LoginForm() {
           </div>
         </div>
 
-        {/* Mensagem de Erro Visual */}
         {error && (
           <div className="flex items-center gap-2 justify-center bg-red-500/10 p-3 rounded-lg border border-red-500/20">
             <AlertCircle className="text-red-500" size={14} />
-            <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider">
+            <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider text-center">
               {error}
             </p>
           </div>
@@ -107,7 +114,7 @@ export default function LoginForm() {
         </Button>
 
         <div className="text-center">
-          <a href="#" className="text-[11px] text-secondary hover:underline font-semibold transition-all">
+          <a href="#" className="text-[11px] text-secondary hover:underline font-semibold">
             Esqueceu sua senha?
           </a>
         </div>

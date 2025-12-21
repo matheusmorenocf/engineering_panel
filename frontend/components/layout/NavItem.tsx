@@ -1,25 +1,41 @@
+import Link from 'next/link';
 import React from 'react';
 
 interface NavItemProps {
-  icon: React.ReactNode;
+  icon: any; // Usamos any aqui para aceitar tanto o componente quanto o elemento JSX
   label: string;
-  small?: boolean;
-  isCollapsed?: boolean;
+  href: string;
+  isCollapsed: boolean;
+  active: boolean;
 }
 
-export default function NavItem({ icon, label, small = false, isCollapsed = false }: NavItemProps) {
+export const NavItem = ({ icon: Icon, label, href, isCollapsed, active }: NavItemProps) => {
   return (
-    <button className={`
-      flex items-center gap-4 px-3 py-3 w-full rounded-xl transition-all group cursor-pointer
-      text-text-secondary hover:bg-bg hover:text-secondary
-      ${isCollapsed ? 'justify-center' : 'justify-start'}
-    `}>
-      <span className="group-hover:scale-110 transition-transform">{icon}</span>
+    <Link 
+      href={href} 
+      className={`
+        flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group
+        ${active 
+          ? 'bg-secondary text-white shadow-lg shadow-secondary/20' 
+          : 'text-text-tertiary hover:bg-surface hover:text-text-primary'
+        }
+      `}
+    >
+      {/* Se o Icon for uma função (Componente), renderizamos <Icon />. 
+          Se for um objeto (JSX), renderizamos diretamente {Icon} */}
+      <div className={active ? 'text-white' : 'group-hover:text-secondary'}>
+        {React.isValidElement(Icon) ? (
+          Icon
+        ) : (
+          <Icon size={20} />
+        )}
+      </div>
+
       {!isCollapsed && (
-        <span className={`font-bold uppercase tracking-widest whitespace-nowrap fade-in ${small ? 'text-[10px]' : 'text-[11px]'}`}>
+        <span className="text-[10px] font-black uppercase tracking-widest italic whitespace-nowrap">
           {label}
         </span>
       )}
-    </button>
+    </Link>
   );
-}
+};

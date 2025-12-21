@@ -29,6 +29,8 @@ else:
     # dev fallback to keep local quickstart smooth
     SECRET_KEY = DJANGO_SECRET_KEY or "dev-secret-key-change-me"
 
+CORS_ALLOW_ALL_ORIGINS = True
+
 DEBUG = os.environ.get("DJANGO_DEBUG", os.environ.get("DEBUG", "0")) in ("1", "True", "true", "YES", "yes")
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1")).split(",")
@@ -36,6 +38,20 @@ ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", os.environ.get("ALLOWED_H
 # =========================================================
 # Applications
 # =========================================================
+APPEND_SLASH = False
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -51,6 +67,9 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_yasg",
     "django_filters",
+    'drawings.apps.DrawingsConfig',
+    'orders.apps.OrdersConfig',
+    'catalog.apps.CatalogConfig',
 ]
 
 MIDDLEWARE = [
@@ -134,11 +153,16 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
+        'rest_framework.authentication.SessionAuthentication',
     ),
     "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
 }
 
 SIMPLE_JWT = {
+    'AUTH_HEADER_TYPES': ('Bearer',),
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,

@@ -1,20 +1,21 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { 
-  ClipboardList, FileSearch, CheckCircle2, DollarSign, 
-  Settings, Palette, Moon, Sun, LogOut, ChevronLeft, Cpu 
+  Palette, Moon, Sun, LogOut, ChevronLeft, Cpu 
 } from 'lucide-react';
-import NavItem from './NavItem';
+import { NavItem } from './NavItem';
+import { DASHBOARD_ROUTES } from '@/lib/routes-config';
 import { ColorTheme } from '@/app/(dashboard)/layout';
-
 
 interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (value: boolean) => void;
   toggleTheme: () => void;
   currentTheme: 'light' | 'dark';
-  setColorTheme: (theme: ColorTheme) => void; // A função que criamos no layout
+  setColorTheme: (theme: ColorTheme) => void;
   currentColorTheme: ColorTheme;
 }
 
@@ -28,6 +29,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
 
   // Fecha o menu ao clicar fora
   useEffect(() => {
@@ -46,20 +48,26 @@ export default function Sidebar({
       ${isCollapsed ? 'w-20' : 'w-64'}
     `}>
       
-      {/* Header */}
+      {/* Header com Link na CPU */}
       <div className={`p-6 flex items-center mb-4 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
         {!isCollapsed && (
           <div className="flex items-center gap-3 fade-in">
-            <div className="w-8 h-8 border border-secondary rounded-lg flex items-center justify-center">
+            <Link 
+              href="/dashboard" 
+              className="w-8 h-8 border border-secondary rounded-lg flex items-center justify-center hover:bg-secondary/10 transition-colors cursor-pointer"
+            >
               <Cpu size={18} className="text-secondary" />
-            </div>
+            </Link>
             <span className="font-black text-primary italic tracking-tighter text-lg">ENG.V3</span>
           </div>
         )}
         {isCollapsed && (
-          <div className="w-8 h-8 border border-secondary rounded-lg flex items-center justify-center">
+          <Link 
+            href="/dashboard" 
+            className="w-8 h-8 border border-secondary rounded-lg flex items-center justify-center hover:bg-secondary/10 transition-colors cursor-pointer"
+          >
             <Cpu size={18} className="text-secondary" />
-          </div>
+          </Link>
         )}
         <button 
           onClick={() => setIsCollapsed(!isCollapsed)}
@@ -69,34 +77,40 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* Perfil */}
-      <div className={`px-4 mb-8 transition-all ${isCollapsed ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
-        <div className="flex items-center gap-3 p-3 bg-bg/50 rounded-2xl border border-transparent">
-          <div className="w-10 h-10 bg-secondary rounded-full flex min-w-10 items-center justify-center text-white font-bold text-xs shadow-sm">
-            MA
-          </div>
-          <div className="flex flex-col truncate">
-            <span className="text-[11px] font-black text-primary uppercase italic tracking-wider leading-none">Master</span>
-            <div className="flex items-center gap-1.5 mt-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-[9px] font-bold text-text-tertiary uppercase tracking-widest">Sincronizado</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Menu Principal */}
-      <nav className="flex-1 px-4 flex flex-col gap-1 overflow-y-auto overflow-x-hidden">
-        <NavItem icon={<ClipboardList size={20} />} label="Ordens de Produção" isCollapsed={isCollapsed} />
-        <NavItem icon={<FileSearch size={20} />} label="Gestão de Desenhos" isCollapsed={isCollapsed} />
-        <NavItem icon={<CheckCircle2 size={20} />} label="Aprovação de Desenhos" isCollapsed={isCollapsed} />
-        <NavItem icon={<DollarSign size={20} />} label="Orçamentos" isCollapsed={isCollapsed} />
-        <NavItem icon={<Settings size={20} />} label="Administração" isCollapsed={isCollapsed} />
+      {/* Menu Principal Dinâmico */}
+      <nav className="flex-1 px-4 flex flex-col gap-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+        {DASHBOARD_ROUTES.map((route) => (
+          <NavItem 
+            key={route.href}
+            icon={route.icon} 
+            label={route.label} 
+            href={route.href}
+            isCollapsed={isCollapsed} 
+            active={pathname === route.href}
+          />
+        ))}
       </nav>
 
       {/* Footer */}
       <div className="p-4 border-t border-border flex flex-col gap-1">
         
+        {/* Seção Quem está conectado (Perfil) - Movida para o Footer */}
+        <div className={`mb-2 transition-all ${isCollapsed ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
+          <div className="flex items-center gap-3 p-3 bg-bg/50 rounded-2xl border border-transparent">
+            <div className="w-10 h-10 bg-secondary rounded-full flex min-w-10 items-center justify-center text-white font-bold text-xs shadow-sm">
+              MA
+            </div>
+            <div className="flex flex-col truncate">
+              <span className="text-[11px] font-black text-primary uppercase italic tracking-wider leading-none">Master</span>
+              <div className="flex items-center gap-1.5 mt-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-[9px] font-bold text-text-tertiary uppercase tracking-widest">Sincronizado</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Botão Temas Visuais */}
         <div className="relative" ref={menuRef}>
           <button 
             onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
@@ -125,6 +139,7 @@ export default function Sidebar({
           )}
         </div>
 
+        {/* Botão Modo Claro/Escuro */}
         <button 
           onClick={toggleTheme}
           className={`
@@ -141,6 +156,7 @@ export default function Sidebar({
           )}
         </button>
 
+        {/* Botão Sair */}
         <button className={`flex items-center gap-4 px-3 py-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-all group mt-2 cursor-pointer ${isCollapsed ? 'justify-center' : ''}`}>
           <LogOut size={20} />
           {!isCollapsed && <span className="text-[10px] font-black uppercase tracking-widest">Sair</span>}

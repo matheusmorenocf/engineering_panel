@@ -1,57 +1,88 @@
+"use client";
+
 import React from 'react';
-import { Zap, ShieldCheck, LayoutGrid, Settings2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import FeatureCard from '@/components/dashboard/FeatureCard';
-import InfoBanner from '@/components/dashboard/InfoBanner';
+import { Database, Settings, Lock } from 'lucide-react';
 
 export default function DashboardPage() {
+  const { user, loading, hasPermission } = useAuth();
+
+  if (loading) return (
+    <div className="p-10 flex items-center justify-center">
+      <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary animate-pulse">
+        Verificando credenciais...
+      </p>
+    </div>
+  );
+
   return (
-    <div className="w-full max-w-6xl flex flex-col items-center fade-in">
+    /* Ajuste de Layout: 
+       - w-full para ocupar todo o espaço disponível
+       - max-w-[1920px] para telas ultra-wide
+       - p-6 lg:p-10 para igualar ao espaçamento do Catálogo
+    */
+    <div className="w-full max-w-[1920px] flex flex-col gap-8 fade-in p-6 lg:p-10">
       
-      {/* Header Central */}
-      <div className="flex flex-col items-center mb-16">
-        <div className="w-16 h-16 bg-surface border border-border rounded-2xl flex items-center justify-center shadow-sm mb-6 text-secondary font-mono text-2xl font-bold">
-          <span className="opacity-40">{`>`}</span>
-          <span className="animate-pulse">_</span>
+      <header className="flex flex-col gap-1">
+        <h1 className="text-4xl font-black text-text-primary uppercase italic tracking-tighter">
+          Painel de <span className="text-secondary">Controle</span>
+        </h1>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-secondary rounded-full animate-pulse" />
+          <p className="text-text-tertiary text-[10px] font-black uppercase tracking-[0.2em]">
+            Bem-vindo, {user?.username || 'Operador'}
+          </p>
         </div>
-        <h1 className="text-5xl font-black text-secondary italic tracking-tighter uppercase mb-2">Master</h1>
-        <div className="flex items-center gap-2 text-[11px] font-black text-text-tertiary uppercase tracking-[0.2em]">
-          <span>Acesso Autorizado</span>
-          <span className="text-border">•</span>
-          <span>Eng.V3</span>
-        </div>
-        <p className="mt-6 text-center text-text-secondary max-w-2xl text-lg leading-relaxed">
-          Você está no núcleo de processamento da <strong className="text-text-primary">Engenharia V3</strong>.
-        </p>
+      </header>
+
+      {/* Grid de Cards - Ajustado para responsividade */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+        <FeatureCard 
+          icon={<Database size={24} />} 
+          title="Base de Dados" 
+          description="Visualização técnica de materiais e registros SB1010." 
+          href="/catalog" // Ajustado para o catálogo que criamos
+        />
+
+        {/* Só mostra o card de Sistema se for Admin ou tiver permissão específica */}
+        {hasPermission('admin_access') ? (
+          <FeatureCard 
+            icon={<Settings size={24} />} 
+            title="Configurações" 
+            description="Administração global do sistema e parâmetros." 
+            href="/settings" 
+          />
+        ) : (
+          <div className="p-8 bg-surface/50 border border-dashed border-border rounded-2xl opacity-60 flex flex-col gap-4 grayscale">
+             <Lock className="text-text-tertiary" size={24} />
+             <div className="flex flex-col gap-1">
+                <h3 className="text-[11px] font-black uppercase text-text-tertiary tracking-widest italic">Acesso Restrito</h3>
+                <p className="text-[10px] font-bold text-text-tertiary uppercase leading-tight">Contate o administrador para obter permissões de edição.</p>
+             </div>
+          </div>
+        )}
       </div>
 
-      {/* Grid de FeatureCards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mb-8">
-        <FeatureCard 
-          icon={<Zap size={20} />} 
-          title="Fluxo de Produção" 
-          desc="Acesse as **Ordens de Produção** para monitorar o status em tempo real."
-          borderColor="border-blue-500"
-        />
-        <FeatureCard 
-          icon={<ShieldCheck size={20} />} 
-          title="Matriz de Controle" 
-          desc="Gestão de segurança granular. No módulo de **Administração**, defina privilégios."
-          borderColor="border-blue-400"
-        />
-        <FeatureCard 
-          icon={<LayoutGrid size={20} />} 
-          title="Núcleo Técnico" 
-          desc="Integração direta com **desenhos e especificações** técnicas."
-          borderColor="border-orange-400"
-        />
+      {/* Seção de Ações Rápidas */}
+      <div className="mt-4 p-8 bg-surface border border-border rounded-2xl shadow-sm">
+        <h2 className="text-[12px] font-black text-text-primary uppercase italic mb-6 tracking-widest border-b border-border pb-4">
+          Ações Rápidas
+        </h2>
+        
+        <div className="flex flex-wrap gap-4">
+          <button 
+            disabled={!hasPermission('core.change_desenho')}
+            className="px-8 py-3 bg-secondary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg shadow-secondary/20"
+          >
+            {hasPermission('core.change_desenho') ? "Salvar Alterações" : "Apenas Visualização"}
+          </button>
+          
+          <button className="px-8 py-3 bg-bg border border-border text-text-primary text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-surface transition-all">
+            Gerar Relatório
+          </button>
+        </div>
       </div>
-
-      {/* Banner Modular */}
-      <InfoBanner 
-        icon={<Settings2 size={24} />}
-        title="Instrução de Navegação"
-        description="Utilize o menu lateral para transitar entre os módulos operacionais. Cada ação realizada é registrada sob sua assinatura digital."
-      />
     </div>
   );
 }

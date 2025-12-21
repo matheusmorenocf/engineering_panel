@@ -4,61 +4,75 @@ import Sidebar from '@/components/layout/Sidebard';
 import React, { useState, useEffect } from 'react';
 
 
+// Definição dos tipos de temas de cores disponíveis
 export type ColorTheme = 'default' | 'emerald' | 'amber' | 'ruby' | 'amethyst';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Estados de controle da interface
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('light');
   const [colorTheme, setColorTheme] = useState<ColorTheme>('default');
-  const [mounted, setMounted] = useState(false);
 
-  // Sincronização inicial
+  // Inicialização: Tenta recuperar preferências salvas no navegador
   useEffect(() => {
-    setMounted(true);
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
     const savedColor = localStorage.getItem('colorTheme') as ColorTheme;
-    if (savedTheme) setTheme(savedTheme);
-    if (savedColor) setColorTheme(savedColor);
+    
+    if (savedTheme) {
+      setCurrentTheme(savedTheme);
+      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+    }
+    
+    if (savedColor) {
+      setColorTheme(savedColor);
+      document.documentElement.setAttribute('data-color-theme', savedColor);
+    }
   }, []);
 
-  // Aplicação dos temas no elemento raiz
-  useEffect(() => {
-    if (mounted) {
-      document.documentElement.setAttribute('data-theme', theme);
-      document.documentElement.setAttribute('data-color-theme', colorTheme);
-      localStorage.setItem('theme', theme);
-      localStorage.setItem('colorTheme', colorTheme);
-    }
-  }, [theme, colorTheme, mounted]);
-
-  const changeColorTheme = (newColor: ColorTheme) => {
-    setColorTheme(newColor);
-  };
-
+  // Alternar entre modo claro e escuro
   const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    setCurrentTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.toggle('dark');
   };
 
-  // IMPORTANTE: Retornamos a mesma estrutura de tags mesmo antes do mounted
-  // apenas escondendo o conteúdo ou usando cores neutras para evitar o erro de hidratação.
+  // Alterar o tema de cor (azul, verde, amarelo, etc)
+  const handleSetColorTheme = (theme: ColorTheme) => {
+    setColorTheme(theme);
+    localStorage.setItem('colorTheme', theme);
+    document.documentElement.setAttribute('data-color-theme', theme);
+  };
+
   return (
-    <div className="flex min-h-screen bg-bg antialiased transition-all duration-300">
+    <div className="flex min-h-screen bg-bg antialiased transition-colors duration-300">
+      
+      {/* Sidebar Fixa */}
       <Sidebar 
         isCollapsed={isCollapsed} 
         setIsCollapsed={setIsCollapsed} 
         toggleTheme={toggleTheme}
-        currentTheme={theme}
-        setColorTheme={changeColorTheme}
+        currentTheme={currentTheme}
+        setColorTheme={handleSetColorTheme}
         currentColorTheme={colorTheme}
       />
-
+      
+      {/* Área de Conteúdo Principal 
+          A margem esquerda (ml) ajusta dinamicamente para não ficar sob a Sidebar fixa.
+      */}
       <main 
-        className={`flex-1 flex flex-col items-center p-12 transition-all duration-300 ${
-          isCollapsed ? 'ml-20' : 'ml-64'
-        }`}
+        className={`
+          flex-1 flex flex-col min-w-0 transition-all duration-300
+          ${isCollapsed ? 'ml-20' : 'ml-64'}
+        `}
       >
-        {/* Renderiza o conteúdo apenas após montar no cliente para garantir acesso ao localStorage/theme */}
-        {mounted ? children : <div className="w-full h-full" />}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+          {children}
+        </div>
       </main>
     </div>
   );
