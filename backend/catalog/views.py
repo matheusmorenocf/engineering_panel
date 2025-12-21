@@ -3,6 +3,9 @@ import traceback
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import viewsets
+from .models import Sector, ProductType
+from .serializers import SectorSerializer, ProductTypeSerializer
 from django.db.models import Q
 from .models import SB1010
 
@@ -85,3 +88,13 @@ class ProductCatalogView(APIView):
             print("--- ERRO CRÍTICO NO BACKEND ---")
             print(traceback.format_exc()) # Imprime o erro completo no terminal
             return Response({"error": str(e), "trace": traceback.format_exc()}, status=500)
+
+class SectorViewSet(viewsets.ModelViewSet):
+    queryset = Sector.objects.all()
+    serializer_class = SectorSerializer
+    permission_classes = [IsAuthenticated]
+
+class ProductTypeViewSet(viewsets.ModelViewSet):
+    queryset = ProductType.objects.all()
+    serializer_class = ProductTypeSerializer
+    permission_classes = [IsAuthenticated]

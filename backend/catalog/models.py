@@ -1,6 +1,7 @@
 from django.db import models
 from drawings.models import Drawing
 
+# 1. Modelos de Apoio (Devem vir antes do Produto)
 class Sector(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="Nome do Setor")
     description = models.TextField(blank=True, null=True, verbose_name="Descrição")
@@ -22,6 +23,7 @@ class ProductType(models.Model):
         verbose_name = "Tipo de Produto"
         verbose_name_plural = "Tipos de Produtos"
 
+# 2. Modelo Principal de Produto
 class Product(models.Model):
     drawing = models.ForeignKey(
         Drawing, 
@@ -30,7 +32,6 @@ class Product(models.Model):
         verbose_name="Desenho"
     )
     
-    # Agora apontam para os novos modelos dinâmicos
     sector = models.ForeignKey(
         Sector, 
         on_delete=models.PROTECT, 
@@ -53,13 +54,12 @@ class Product(models.Model):
         verbose_name = "Produto"
         verbose_name_plural = "Catálogo de Produtos"
 
+# 3. Modelo Legado (Protheus)
 class SB1010(models.Model):
-    # Mudamos o nome da variável para 'deleted' para evitar o erro E001
-    # mas mantemos o db_column apontando para 'D_E_L_E_T_'
     b1_cod = models.CharField(max_length=30, db_column='B1_COD', primary_key=True)
     b1_desc = models.CharField(max_length=100, db_column='B1_DESC')
     b1_desenho = models.CharField(max_length=50, db_column='B1_DESENHO')
-    deleted = models.CharField(max_length=1, db_column='D_E_L_E_T_')
+    deleted = models.CharField(max_length=1, db_column='D_E_L_E_T_', default='')
 
     class Meta:
         managed = False

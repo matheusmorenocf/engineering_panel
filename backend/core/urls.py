@@ -6,9 +6,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 
-# Importamos a View do Catálogo
-from catalog.views import ProductCatalogView
-
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -17,8 +14,9 @@ def get_user_profile(request):
     Retorna os dados do usuário e sua lista de permissões simplificada.
     """
     user_perms = []
-    for perm in request.user.get_all_permissions():
-        user_perms.append(perm.split('.')[-1])
+    if request.user.is_authenticated:
+        for perm in request.user.get_all_permissions():
+            user_perms.append(perm.split('.')[-1])
 
     return Response({
         'id': request.user.id,
@@ -40,6 +38,7 @@ urlpatterns = [
     # Perfil e Permissões
     re_path(r'^api/user/me/?$', get_user_profile, name='user_profile'),
 
-    # Catálogo de Produtos (Base SB1010)
-    re_path(r'^api/catalog/products/?$', ProductCatalogView.as_view(), name='catalog_products'),
+    # ROTAS DO CATÁLOGO E GESTÃO
+    # O include delega para o backend/catalog/urls.py
+    path('api/catalog/', include('catalog.urls')),
 ]
