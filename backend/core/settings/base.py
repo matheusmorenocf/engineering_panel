@@ -233,3 +233,9 @@ LOGGING = {
         },
     },
 }
+
+# URL pública para o frontend
+MEDIA_URL = '/media/'
+
+# Pasta interna onde o Docker vai "montar" o seu disco D:
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

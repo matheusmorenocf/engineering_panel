@@ -46,13 +46,16 @@ class Product(models.Model):
     
     sector = models.ForeignKey(
         Sector, 
-        on_delete=models.PROTECT, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
         verbose_name="Setor"
     )
-    
     product_type = models.ForeignKey(
         ProductType, 
-        on_delete=models.PROTECT, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
         verbose_name="Tipo"
     )
 

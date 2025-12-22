@@ -27,6 +27,7 @@ services:
       - ./backend:/app
       - backend_media:/app/media
       - backend_static:/app/static
+      - /d/produtos:/app/media
     ports:
       - "8000:8000"
     environment:

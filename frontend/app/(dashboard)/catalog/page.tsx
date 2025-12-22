@@ -136,19 +136,19 @@ export default function CatalogPage() {
           </div>
         ) : (
           /* GRID DE CARDS */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl gap-6">
             {products.map((group: any) => (
-            <DrawingCard 
-                  key={group.id}               // Alterado: a View envia 'id'
-                  drawingId={group.drawingId}   // Alterado: a View envia 'drawingId'
-                  sector={group.sector}         // Adicionado: para exibir o setor
-                  type={group.type}             // Adicionado: para exibir o tipo
-                  products={group.products}     // Alterado: a View envia 'products'
-                  descriptions={group.descriptions} // Alterado: a View envia 'descriptions'
-                  itemsCount={group.items_count} // Adicionado: caso seu card mostre a contagem
-                />
+              <DrawingCard 
+                key={group.id}
+                drawingId={group.drawingId}
+                sector={group.sector}
+                type={group.type}
+                products={group.products}
+                descriptions={group.descriptions}
+                itemsCount={group.items_count}
+                imageUrl={group.imageUrl} // <--- ADICIONE ESTA LINHA
+              />
             ))}
-            
             {/* Estado vazio */}
             {!loading && products.length === 0 && !apiError && (
               <div className="col-span-full flex flex-col items-center justify-center py-20 opacity-50">
