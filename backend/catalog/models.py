@@ -95,17 +95,15 @@ class SB1010(models.Model):
         max_length=50, 
         db_column='B1_DESENHO',
         verbose_name="Código do Desenho",
-        db_index=True  # ✅ Index para melhor performance
+        db_index=True  
     )
     
-    # ✅ CORREÇÃO CRÍTICA: Nome do campo no Protheus
-    # A coluna real no banco é 'D_E_L_E_T_' (com underscores)
     deleted = models.CharField(
         max_length=1, 
-        db_column='D_E_L_E_T_',  # ✅ Nome correto da coluna
+        db_column='D_E_L_E_T_',  
         default='',
         verbose_name="Registro Deletado",
-        db_index=True  # ✅ Index para filtros rápidos
+        db_index=True  
     )
 
     def __str__(self):

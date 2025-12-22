@@ -14,7 +14,7 @@ export default function CatalogPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [limit, setLimit] = useState(500); // 
+  const [limit] = useState(500); // 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -45,8 +45,6 @@ export default function CatalogPage() {
         types: filters.types.join(','),
       });
 
-      console.log('[CATALOG] Fetching:', `/api/catalog/products?${queryParams.toString()}`);
-
       const response = await apiFetch(`/api/catalog/products?${queryParams.toString()}`);
 
       if (!response.ok) {
@@ -56,7 +54,6 @@ export default function CatalogPage() {
 
       const data = await response.json();
       
-      // ✅ CORREÇÃO: API agora retorna { count, results }
       if (data.results && Array.isArray(data.results)) {
         setProducts(data.results);
         setTotalCount(data.count || data.results.length);
@@ -141,12 +138,15 @@ export default function CatalogPage() {
           /* GRID DE CARDS */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
             {products.map((group: any) => (
-              <DrawingCard 
-                key={group.drawing_id}
-                drawingId={group.drawing_id}
-                products={group.drawing_product}
-                descriptions={group.drawing_description}
-              />
+            <DrawingCard 
+                  key={group.id}               // Alterado: a View envia 'id'
+                  drawingId={group.drawingId}   // Alterado: a View envia 'drawingId'
+                  sector={group.sector}         // Adicionado: para exibir o setor
+                  type={group.type}             // Adicionado: para exibir o tipo
+                  products={group.products}     // Alterado: a View envia 'products'
+                  descriptions={group.descriptions} // Alterado: a View envia 'descriptions'
+                  itemsCount={group.items_count} // Adicionado: caso seu card mostre a contagem
+                />
             ))}
             
             {/* Estado vazio */}

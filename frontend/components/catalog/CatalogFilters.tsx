@@ -32,57 +32,33 @@ export const CatalogFilters = ({ filters, setFilters, onOpenManagement }: Catalo
   useEffect(() => {
     const fetchOptions = async () => {
       try {
+        setLoading(true);
         console.log('[FILTERS] Fetching sectors and types...');
 
+        // Adicionada a barra "/" no final das URLs para casar com o Router do Django
         const [secRes, typRes] = await Promise.all([
-          apiFetch("/api/catalog/management/sectors"),
-          apiFetch("/api/catalog/management/types"),
+          apiFetch("/api/catalog/management/sectors/"),
+          apiFetch("/api/catalog/management/types/"),
         ]);
 
-        if (secRes.ok && typRes.ok) {
-          const secData = await secRes.json();
-          const typData = await typRes.json();
-
-          const sectors = Array.isArray(secData) ? secData : secData?.results || [];
-          const types = Array.isArray(typData) ? typData : typData?.results || [];
-
-          setSectorsOptions(sectors);
-          setTypesOptions(types);
+        if (!secRes.ok || !typRes.ok) {
+          throw new Error(`Erro na requisição: Sectors ${secRes.status}, Types ${typRes.status}`);
         }
 
-        console.log('[FILTERS] Response status:', { 
-          sectors: secRes.status, 
-          types: typRes.status 
-        });
+        const secData = await secRes.json();
+        const typData = await typRes.json();
 
-        if (secRes.ok && typRes.ok) {
-          const sectors = await secRes.json();
-          const types = await typRes.json();
-          
-          setSectorsOptions(sectors);
-          setTypesOptions(types);
-          
-          console.log('[FILTERS] Loaded:', { 
-            sectors: sectors.length, 
-            types: types.length 
-          });
-        } else {
-          // ✅ CORREÇÃO: Tratamento de erro mais robusto
-          const secError = !secRes.ok ? await secRes.text().catch(() => 'Erro desconhecido') : null;
-          const typError = !typRes.ok ? await typRes.text().catch(() => 'Erro desconhecido') : null;
-          
-          console.error('[FILTERS] Error loading filters:', { 
-            sectorsStatus: secRes.status,
-            typesStatus: typRes.status,
-            sectorsError: secError,
-            typesError: typError
-          });
-          
-          addToast('Erro ao carregar filtros', 'warning');
-        }
-      } catch (error) {
-        console.error("[FILTERS] Fatal error:", error);
-        addToast('Erro de conexão ao carregar filtros', 'error');
+        // Tratamento para garantir que pegamos a lista, quer venha paginada ou não
+        const sectors = Array.isArray(secData) ? secData : secData?.results || [];
+        const types = Array.isArray(typData) ? typData : typData?.results || [];
+
+        setSectorsOptions(sectors);
+        setTypesOptions(types);
+
+        console.log('[FILTERS] Loaded successfully');
+      } catch (error: any) {
+        console.error("[FILTERS] Error:", error);
+        addToast('Erro ao carregar filtros de categoria', 'warning');
       } finally {
         setLoading(false);
       }
@@ -159,6 +135,7 @@ export const CatalogFilters = ({ filters, setFilters, onOpenManagement }: Catalo
                     return (
                       <button
                         key={opt.id}
+                        type="button"
                         onClick={() => toggleFilter(opt.id, 'sectors')}
                         className={`
                           px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all
@@ -186,6 +163,7 @@ export const CatalogFilters = ({ filters, setFilters, onOpenManagement }: Catalo
                     return (
                       <button
                         key={opt.id}
+                        type="button"
                         onClick={() => toggleFilter(opt.id, 'types')}
                         className={`
                           px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all
@@ -201,7 +179,6 @@ export const CatalogFilters = ({ filters, setFilters, onOpenManagement }: Catalo
                 </div>
               )}
               
-              {/* Mensagem se não houver filtros cadastrados */}
               {!loading && sectorsOptions.length === 0 && typesOptions.length === 0 && (
                 <div className="text-center py-4 text-text-tertiary text-xs">
                   <p className="font-bold uppercase">Nenhum filtro cadastrado</p>
