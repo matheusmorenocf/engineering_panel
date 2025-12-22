@@ -3,6 +3,7 @@
 import { Search, Settings2, Layers, Tag, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/context/ToastContext';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface CatalogFiltersProps {
   filters: {
@@ -31,15 +32,23 @@ export const CatalogFilters = ({ filters, setFilters, onOpenManagement }: Catalo
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const token = localStorage.getItem('access_token');
-        const headers = { 'Authorization': `Bearer ${token}` };
-
         console.log('[FILTERS] Fetching sectors and types...');
 
         const [secRes, typRes] = await Promise.all([
-          fetch('/api/catalog/management/sectors', { headers }),
-          fetch('/api/catalog/management/types', { headers })
+          apiFetch("/api/catalog/management/sectors"),
+          apiFetch("/api/catalog/management/types"),
         ]);
+
+        if (secRes.ok && typRes.ok) {
+          const secData = await secRes.json();
+          const typData = await typRes.json();
+
+          const sectors = Array.isArray(secData) ? secData : secData?.results || [];
+          const types = Array.isArray(typData) ? typData : typData?.results || [];
+
+          setSectorsOptions(sectors);
+          setTypesOptions(types);
+        }
 
         console.log('[FILTERS] Response status:', { 
           sectors: secRes.status, 

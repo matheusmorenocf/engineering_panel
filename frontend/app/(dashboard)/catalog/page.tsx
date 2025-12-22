@@ -14,7 +14,7 @@ export default function CatalogPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [limit, setLimit] = useState(500); // ✅ Aumentado para 500
+  const [limit, setLimit] = useState(500); // 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -35,8 +35,6 @@ export default function CatalogPage() {
     setApiError(null);
     
     try {
-      const token = localStorage.getItem('access_token');
-      
       // Prepara os parâmetros
       const queryParams = new URLSearchParams({
         limit: currentLimit.toString(),
@@ -49,12 +47,7 @@ export default function CatalogPage() {
 
       console.log('[CATALOG] Fetching:', `/api/catalog/products?${queryParams.toString()}`);
 
-      const response = await apiFetch(`/api/catalog/products?${queryParams.toString()}`, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await apiFetch(`/api/catalog/products?${queryParams.toString()}`);
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
@@ -94,7 +87,7 @@ export default function CatalogPage() {
 
   return (
     <ProtectedRoute permission="view_product">
-      <div className="w-full max-w-[1920px] flex flex-col gap-8 p-6 lg:p-10 fade-in">
+      <div className="w-full max-w-480 flex flex-col gap-8 p-6 lg:p-10 fade-in">
         
         {/* HEADER */}
         <header className="flex flex-col gap-1">

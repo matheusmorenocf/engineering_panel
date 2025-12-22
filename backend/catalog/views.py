@@ -1,28 +1,30 @@
-from django.db.models import Q
-from rest_framework import viewsets, status, generics
+from django.db.models import Q, Count, Value, OuterRef, Subquery, Case, When, IntegerField, ExpressionWrapper
+from django.db.models.functions import Trim, Upper, Length, Substr, Coalesce
+from django.contrib.postgres.aggregates import StringAgg
+
+from rest_framework import status, generics, viewsets  # Adicionado viewsets aqui
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from drawings.models import Drawing
-from drawings.serializers import DrawingSerializer
+from .models import Product, SB1010, Sector, ProductType
+from django.db.models import F
 
-from .models import Sector, ProductType, Product, SB1010
+# Importando serializers (ajuste os caminhos conforme sua estrutura de pastas)
 from .serializers import SectorSerializer, ProductTypeSerializer, ProductSerializer
+from drawings.serializers import DrawingSerializer
 
 
 class ProductCatalogView(generics.GenericAPIView):
-    """Catálogo (somente leitura) baseado na SB1010 (Protheus).
+    """
+    Catálogo (somente leitura) baseado na SB1010 (Protheus),
+    agrupado por uma chave derivada do desenho:
 
-    Retorna grupos por desenho (B1_DESENHO), no formato:
-      { count: <qtd de desenhos>, results: [{drawing_id, drawing_product, drawing_description}, ...] }
+      product_key = UPPER(TRIM(B1_DESENHO)) removendo os 3 últimos caracteres
+                   (ex: SID110-0001-000-01 -> SID110-0001-000)
 
-    Filtros aceitos (query params):
-      - codigo: filtra B1_COD (icontains)
-      - descricao: filtra B1_DESC (icontains)
-      - desenho: filtra B1_DESENHO (icontains)
-      - sectors: lista de IDs (ex.: sectors=1&sectors=2 ou sectors=1,2)
-      - types: lista de IDs (ex.: types=1&types=2 ou types=1,2)
-      - limit / offset: paginação por grupos de desenho
+    Join com o controle local:
+      Drawing.code (já vem SEM sufixo) normalizado: UPPER(TRIM(code))
     """
 
     permission_classes = [IsAuthenticated]
@@ -39,128 +41,196 @@ class ProductCatalogView(generics.GenericAPIView):
         for item in raw:
             if item is None:
                 continue
-            parts = str(item).split(',')
-            for p in parts:
+            for p in str(item).split(","):
                 p = p.strip()
                 if not p:
                     continue
                 try:
                     out.append(int(p))
                 except ValueError:
-                    continue
+                    pass
         return out
 
     def get(self, request, *args, **kwargs):
-        codigo = (request.query_params.get('codigo') or '').strip()
-        descricao = (request.query_params.get('descricao') or '').strip()
-        desenho = (request.query_params.get('desenho') or '').strip()
+        codigo = (request.query_params.get("codigo") or "").strip()
+        descricao = (request.query_params.get("descricao") or "").strip()
+        desenho = (request.query_params.get("desenho") or "").strip()
 
         sectors = self._parse_id_list(
-            request.query_params.getlist('sectors') or request.query_params.get('sectors')
+            request.query_params.getlist("sectors") or request.query_params.get("sectors")
         )
         types = self._parse_id_list(
-            request.query_params.getlist('types') or request.query_params.get('types')
+            request.query_params.getlist("types") or request.query_params.get("types")
         )
 
         try:
-            limit = int(request.query_params.get('limit', '500'))
-            offset = int(request.query_params.get('offset', '0'))
+            limit = int(request.query_params.get("limit", "50"))
+            offset = int(request.query_params.get("offset", "0"))
         except ValueError:
-            return Response({'detail': 'Parâmetros limit/offset inválidos.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Parâmetros limit/offset inválidos."}, status=status.HTTP_400_BAD_REQUEST)
 
-        limit = max(1, min(limit, 2000))
+        limit = max(1, min(limit, 200))
         offset = max(0, offset)
 
-        # Base: apenas registros não deletados no Protheus
-        qs = SB1010.objects.filter(Q(deleted='') | Q(deleted=None))
-
-        if codigo:
-            qs = qs.filter(b1_cod__icontains=codigo)
-        if descricao:
-            qs = qs.filter(b1_desc__icontains=descricao)
-        if desenho:
-            qs = qs.filter(b1_desenho__icontains=desenho)
-
-        # Filtro por mapeamento local (Product)
-        if sectors or types:
-            prod_qs = Product.objects.all()
-            if sectors:
-                prod_qs = prod_qs.filter(sector_id__in=sectors)
-            if types:
-                prod_qs = prod_qs.filter(product_type_id__in=types)
-
-            allowed_drawings = prod_qs.values_list('drawing__code', flat=True).distinct()
-            qs = qs.filter(b1_desenho__in=allowed_drawings)
-
-        # Paginação por desenho (grupos)
-        drawings_qs = qs.values_list('b1_desenho', flat=True).distinct().order_by('b1_desenho')
-        total = drawings_qs.count()
-
-        page_drawings = list(drawings_qs[offset: offset + limit])
-        if not page_drawings:
-            return Response({'count': total, 'results': []})
-
-        rows = (
-            qs.filter(b1_desenho__in=page_drawings)
-              .values('b1_desenho', 'b1_cod', 'b1_desc')
-              .order_by('b1_desenho', 'b1_cod')
+        # -------------------------
+        # 1) Base SB1010 (Protheus)
+        # -------------------------
+        sb = (
+            SB1010.objects
+            .exclude(deleted="*")
+            .exclude(b1_desenho__isnull=True)
+            .exclude(b1_desenho="")
         )
 
-        grouped = {}
-        for r in rows:
-            did = r['b1_desenho']
-            grouped.setdefault(did, {'drawing_id': did, 'products': [], 'descriptions': []})
-            grouped[did]['products'].append(r['b1_cod'])
-            grouped[did]['descriptions'].append(r['b1_desc'])
+        # Normalização inicial para gerar a chave
+        sb = sb.annotate(
+            desenho_norm=Upper(Trim("b1_desenho")),
+            desenho_len=Length(Upper(Trim("b1_desenho")))
+        )
 
+        # Cálculo da product_key (removendo sufixo de 3 chars)
+        cut_len = ExpressionWrapper(F("desenho_len") - Value(3), output_field=IntegerField())
+        
+        sb = sb.annotate(
+            product_key=Case(
+                When(desenho_len__gt=3, then=Substr("desenho_norm", 1, cut_len)),
+                default=F("desenho_norm"),
+            )
+        )
+
+        # Filtros de texto
+        if codigo:
+            sb = sb.filter(b1_cod__icontains=codigo)
+        if descricao:
+            sb = sb.filter(b1_desc__icontains=descricao)
+        if desenho:
+            sb = sb.filter(b1_desenho__icontains=desenho)
+
+        # ---------------------------------------
+        # 2) Controle local: Drawing + Product
+        # ---------------------------------------
+        drawings = Drawing.objects.annotate(code_key=Upper(Trim("code")))
+        prod = Product.objects.select_related("drawing", "sector", "product_type")
+
+        if sectors:
+            prod = prod.filter(sector_id__in=sectors)
+        if types:
+            prod = prod.filter(product_type_id__in=types)
+
+        # Filtragem por mapeamento ou filtros de setor/tipo
+        only_mapped = (request.query_params.get("only_mapped") or "1") == "1"
+
+        if only_mapped or sectors or types:
+            allowed_keys = (
+                drawings.filter(id__in=prod.values("drawing_id"))
+                        .values("code_key")
+                        .distinct()
+            )
+            sb = sb.filter(product_key__in=Subquery(allowed_keys))
+
+        # -----------------------------
+        # 3) Pegar sector/type por key
+        # -----------------------------
+        sb = sb.annotate(
+            local_drawing_id=Subquery(
+                drawings.filter(code_key=OuterRef("product_key"))
+                        .values("id")[:1]
+            )
+        )
+
+        sector_name_sq = (
+            Product.objects
+            .filter(drawing_id=OuterRef("local_drawing_id"))
+            .values("sector__name")[:1]
+        )
+
+        type_name_sq = (
+            Product.objects
+            .filter(drawing_id=OuterRef("local_drawing_id"))
+            .values("product_type__name")[:1]
+        )
+
+        # -----------------------------------
+        # 4) Paginar por product_key + agregar
+        # -----------------------------------
+        keys_qs = sb.values("product_key").distinct().order_by("product_key")
+        total = keys_qs.count()
+        page_keys = [r["product_key"] for r in keys_qs[offset: offset + limit]]
+
+        if not page_keys:
+            return Response({"count": total, "results": []})
+
+        grouped = (
+            sb.filter(product_key__in=page_keys)
+            .annotate(
+                sector_label=Coalesce(Subquery(sector_name_sq), Value("N/A")),
+                type_label=Coalesce(Subquery(type_name_sq), Value("N/A")),
+            )
+            .values("product_key", "sector_label", "type_label")
+            .annotate(
+                related_codes=StringAgg("b1_cod", delimiter="; ", distinct=True),
+                technical_descriptions=StringAgg("b1_desc", delimiter="; ", distinct=True),
+                items_count=Count("b1_cod", distinct=True),
+            )
+            .order_by("product_key")
+        )
+
+        by_key = {g["product_key"]: g for g in grouped}
         results = []
-        for did in page_drawings:
-            g = grouped.get(did, {'drawing_id': did, 'products': [], 'descriptions': []})
+        for k in page_keys:
+            g = by_key.get(k)
+            if not g:
+                continue
             results.append({
-                'drawing_id': g['drawing_id'],
-                'drawing_product': ';'.join(g['products']),
-                'drawing_description': ';'.join(g['descriptions']),
+                "product_key": g["product_key"],
+                "sector": g["sector_label"],
+                "type": g["type_label"],
+                "items_count": g["items_count"],
+                "related_codes": g["related_codes"] or "",
+                "technical_descriptions": g["technical_descriptions"] or "",
             })
 
-        return Response({'count': total, 'results': results})
+        return Response({"count": total, "results": results})
 
 
 class SectorViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = Sector.objects.all().order_by('name')
+    queryset = Sector.objects.all().order_by("name")
     serializer_class = SectorSerializer
+    pagination_class = None
 
 
 class ProductTypeViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = ProductType.objects.all().order_by('name')
+    queryset = ProductType.objects.all().order_by("name")
     serializer_class = ProductTypeSerializer
+    pagination_class = None
 
 
 class ProductViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = Product.objects.select_related('drawing', 'sector', 'product_type').all().order_by('-created_at')
+    queryset = Product.objects.select_related("drawing", "sector", "product_type").all().order_by("-created_at")
     serializer_class = ProductSerializer
 
 
 class DrawingViewSet(viewsets.ModelViewSet):
     """CRUD de desenhos locais (para associar no Product)."""
     permission_classes = [IsAuthenticated]
-    queryset = Drawing.objects.all().order_by('code')
+    queryset = Drawing.objects.all().order_by("code")
     serializer_class = DrawingSerializer
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        code = self.request.query_params.get('code')
+        code = self.request.query_params.get("code")
         if code:
             queryset = queryset.filter(code__iexact=code)
         return queryset
 
     def create(self, request, *args, **kwargs):
         """Cria um desenho ou retorna o existente quando code já estiver cadastrado."""
-        code = request.data.get('code')
+        code = request.data.get("code")
         if not code:
-            return Response({'error': 'Campo "code" é obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": 'Campo "code" é obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
 
         existing = Drawing.objects.filter(code__iexact=code).first()
         if existing:
