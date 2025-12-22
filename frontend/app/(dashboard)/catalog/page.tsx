@@ -14,11 +14,10 @@ export default function CatalogPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [limit] = useState(500); // 
+  const [limit] = useState(500); 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  // Estado dos filtros
   const [filters, setFilters] = useState({
     codigo: '',
     descricao: '',
@@ -35,7 +34,6 @@ export default function CatalogPage() {
     setApiError(null);
     
     try {
-      // Prepara os parâmetros
       const queryParams = new URLSearchParams({
         limit: currentLimit.toString(),
         codigo: filters.codigo,
@@ -57,26 +55,21 @@ export default function CatalogPage() {
       if (data.results && Array.isArray(data.results)) {
         setProducts(data.results);
         setTotalCount(data.count || data.results.length);
-        console.log(`[CATALOG] Loaded ${data.results.length} groups (total: ${data.count})`);
       } else if (Array.isArray(data)) {
-        // ✅ Fallback: Se a API ainda retornar array direto
         setProducts(data);
         setTotalCount(data.length);
-        console.log(`[CATALOG] Loaded ${data.length} groups (legacy format)`);
       } else {
         throw new Error('Formato de resposta inválido');
       }
 
     } catch (error: any) {
       setApiError(error.message);
-      console.error("[CATALOG] Error:", error);
       addToast(`Erro: ${error.message}`, 'error');
     } finally {
       setLoading(false);
     }
   }, [filters, addToast]);
 
-  // Debounce para não chamar a API a cada letra digitada
   useEffect(() => {
     const delayDebounce = setTimeout(() => fetchProducts(limit), 600);
     return () => clearTimeout(delayDebounce);
@@ -86,7 +79,6 @@ export default function CatalogPage() {
     <ProtectedRoute permission="view_product">
       <div className="w-full max-w-480 flex flex-col gap-8 p-6 lg:p-10 fade-in">
         
-        {/* HEADER */}
         <header className="flex flex-col gap-1">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-secondary/10 rounded-2xl text-secondary border border-secondary/20">
@@ -105,17 +97,14 @@ export default function CatalogPage() {
           </div>
         </header>
 
-        {/* FILTROS */}
         <CatalogFilters 
           filters={filters} 
           setFilters={setFilters} 
           onOpenManagement={() => setIsModalOpen(true)} 
         />
 
-        {/* MODAL DE GESTÃO */}
         <ManagementModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 
-        {/* MENSAGEM DE ERRO */}
         {apiError && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 flex items-center gap-4 text-red-500">
             <AlertCircle size={24} />
@@ -126,7 +115,6 @@ export default function CatalogPage() {
           </div>
         )}
 
-        {/* LOADING STATE */}
         {loading && products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
             <Loader2 className="animate-spin text-secondary" size={48} />
@@ -135,21 +123,20 @@ export default function CatalogPage() {
             </span>
           </div>
         ) : (
-          /* GRID DE CARDS */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((group: any) => (
               <DrawingCard 
                 key={group.id}
                 drawingId={group.drawingId}
-                sector={group.sector}
-                type={group.type}
+                // ✅ PASSANDO OS NOMES PARA OS BADGES DO CARD
+                sectorName={group.sector} 
+                typeName={group.type}
                 products={group.products}
                 descriptions={group.descriptions}
-                itemsCount={group.items_count}
-                imageUrl={group.imageUrl} // <--- ADICIONE ESTA LINHA
+                imageUrl={group.imageUrl}
+                onRefresh={() => fetchProducts(limit)}
               />
             ))}
-            {/* Estado vazio */}
             {!loading && products.length === 0 && !apiError && (
               <div className="col-span-full flex flex-col items-center justify-center py-20 opacity-50">
                 <PackageSearch size={48} className="mb-4" />

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Palette, Moon, Sun, LogOut } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/hooks/useAuth";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 type Props = {
   isCollapsed: boolean;
@@ -13,9 +14,10 @@ type Props = {
 
 export default function UserMenu({ isCollapsed, profileHref = "/dashboard" }: Props) {
   const { addToast } = useToast();
-  const { user, loading,updatePreferences, logout } = useAuth();
+  const { user, loading, updatePreferences, logout } = useAuth();
 
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const currentTheme = user?.preferences?.colorMode === "dark" ? "dark" : "light";
@@ -139,7 +141,7 @@ export default function UserMenu({ isCollapsed, profileHref = "/dashboard" }: Pr
 
       {/* Logout */}
       <button
-        onClick={() => logout({ redirectTo: "/login" })}
+        onClick={() => setIsLogoutModalOpen(true)}
         className={`flex items-center gap-4 px-3 py-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-all ${
           isCollapsed ? "justify-center" : ""
         }`}
@@ -147,6 +149,17 @@ export default function UserMenu({ isCollapsed, profileHref = "/dashboard" }: Pr
         <LogOut size={20} />
         {!isCollapsed && <span className="text-[10px] font-black uppercase tracking-widest">Sair</span>}
       </button>
+
+      <ConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={() => logout({ redirectTo: "/login" })}
+        title="Sair do Sistema"
+        description="Deseja realmente encerrar sua sessão atual?"
+        confirmText="Sair"
+        cancelText="Permanecer"
+        variant="info"
+      />
     </div>
   );
 }

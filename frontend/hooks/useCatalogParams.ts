@@ -11,6 +11,7 @@ export const useCatalogParams = (isOpen: boolean) => {
   const fetchParams = useCallback(async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     try {
+      // ✅ URLs com barra final para satisfazer o Django Router
       const [secRes, typRes] = await Promise.all([
         apiFetch('/api/catalog/management/sectors/'),
         apiFetch('/api/catalog/management/types/')
@@ -49,7 +50,7 @@ export const useCatalogParams = (isOpen: boolean) => {
       if (s) setSectors(s);
       if (t) setTypes(t);
       
-      fetchParams(!!(s && t)); // Se já tem cache, busca em background
+      fetchParams(!!(s && t)); 
     }
   }, [isOpen, fetchParams]);
 

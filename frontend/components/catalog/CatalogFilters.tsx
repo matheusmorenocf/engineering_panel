@@ -4,7 +4,8 @@ import { Search, Settings2, Layers, Tag, Loader2 } from 'lucide-react';
 import { useCatalogParams } from '@/hooks/useCatalogParams';
 
 export const CatalogFilters = ({ filters, setFilters, onOpenManagement }: any) => {
-  const { sectors, types, loading } = useCatalogParams(true); // Sempre ativo na tela principal
+  // ✅ Consome o hook para manter os filtros sincronizados com a gestão
+  const { sectors, types, loading } = useCatalogParams(true);
 
   const handleInputChange = (field: string, value: string) => {
     setFilters((prev: any) => ({ ...prev, [field]: value }));
@@ -13,8 +14,7 @@ export const CatalogFilters = ({ filters, setFilters, onOpenManagement }: any) =
   const toggleFilter = (id: number, field: 'sectors' | 'types') => {
     setFilters((prev: any) => {
       const currentList = prev[field] || [];
-      const exists = currentList.includes(id);
-      const newList = exists 
+      const newList = currentList.includes(id)
         ? currentList.filter((item: number) => item !== id)
         : [...currentList, id];
       return { ...prev, [field]: newList };
@@ -37,7 +37,7 @@ export const CatalogFilters = ({ filters, setFilters, onOpenManagement }: any) =
               <input 
                 type="text"
                 placeholder={input.placeholder}
-                className="w-full bg-bg border border-border rounded-xl py-3 pl-10 pr-4 text-[10px] font-bold uppercase focus:border-secondary outline-none transition-all text-text-primary"
+                className="w-full bg-bg border border-border rounded-xl py-3 pl-10 pr-4 text-[10px] font-bold uppercase focus:border-secondary outline-none transition-all text-text-primary shadow-inner"
                 value={(filters as any)[input.id]}
                 onChange={(e) => handleInputChange(input.id, e.target.value)}
               />
@@ -49,10 +49,7 @@ export const CatalogFilters = ({ filters, setFilters, onOpenManagement }: any) =
       <div className="flex flex-col xl:flex-row gap-6 border-t border-border pt-6 justify-between">
         <div className="flex flex-col gap-4 flex-1">
           {loading && sectors.length === 0 ? (
-            <div className="flex items-center gap-2 text-text-tertiary">
-              <Loader2 className="animate-spin" size={16} />
-              <span className="text-[10px] uppercase font-bold">Carregando...</span>
-            </div>
+            <div className="flex items-center gap-2 text-text-tertiary"><Loader2 className="animate-spin" size={16} /></div>
           ) : (
             <>
               <div className="flex items-center flex-wrap gap-2">
@@ -60,7 +57,7 @@ export const CatalogFilters = ({ filters, setFilters, onOpenManagement }: any) =
                   <Layers size={14} /><span className="text-[9px] font-black uppercase tracking-tighter">Setores:</span>
                 </div>
                 {sectors.map((opt) => (
-                  <button key={opt.id} onClick={() => toggleFilter(opt.id, 'sectors')} className={`px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all ${filters.sectors?.includes(opt.id) ? 'bg-secondary text-white border-secondary shadow-md' : 'bg-bg border-border text-text-tertiary hover:border-secondary'}`}>
+                  <button key={opt.id} onClick={() => toggleFilter(opt.id, 'sectors')} className={`px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all ${filters.sectors?.includes(opt.id) ? 'bg-secondary text-white border-secondary' : 'bg-bg border-border text-text-tertiary'}`}>
                     {opt.name}
                   </button>
                 ))}
@@ -70,7 +67,7 @@ export const CatalogFilters = ({ filters, setFilters, onOpenManagement }: any) =
                   <Tag size={14} /><span className="text-[9px] font-black uppercase tracking-tighter">Tipos:</span>
                 </div>
                 {types.map((opt) => (
-                  <button key={opt.id} onClick={() => toggleFilter(opt.id, 'types')} className={`px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all ${filters.types?.includes(opt.id) ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-bg border-border text-text-tertiary hover:border-blue-600'}`}>
+                  <button key={opt.id} onClick={() => toggleFilter(opt.id, 'types')} className={`px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all ${filters.types?.includes(opt.id) ? 'bg-blue-600 text-white border-blue-600' : 'bg-bg border-border text-text-tertiary'}`}>
                     {opt.name}
                   </button>
                 ))}

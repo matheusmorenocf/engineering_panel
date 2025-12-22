@@ -18,7 +18,7 @@ async function proxyRequest(request: Request, method: string) {
     }
     
     const queryString = searchParams.toString();
-    const internalUrl = `http://${backendHost}:${backendPort}/api/catalog/management/products${queryString ? `?${queryString}` : ''}`;
+    const internalUrl = `http://${backendHost}:${backendPort}/api/catalog/management/products/${queryString ? `?${queryString}` : ''}`;
     
     console.log(`[PRODUCTS ${method}]:`, internalUrl, body || '');
 
