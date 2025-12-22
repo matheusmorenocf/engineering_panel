@@ -22,8 +22,8 @@ def get_user_profile(request):
             user_perms.append(perm)
 
     prefs_obj, _ = UserPreferences.objects.get_or_create(
-    user=request.user,
-    defaults={"data": {}}
+        user=request.user,
+        defaults={"data": {}}
     )
 
     return Response({
@@ -44,17 +44,15 @@ urlpatterns = [
     re_path(r'^api/token/?$', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     re_path(r'^api/token/refresh/?$', TokenRefreshView.as_view(), name='token_refresh'),
     
-    # Perfil e Permissões
+    # Perfil
     re_path(r'^api/user/me/?$', get_user_profile, name='user_profile'),
 
-    # ROTAS DO CATÁLOGO E GESTÃO
-    # O include delega para o backend/catalog/urls.py
+    # ✅ DELEGUE TUDO DO CATÁLOGO PARA O APP CATALOG
     path('api/catalog/', include('catalog.urls')),
 
     path("api/preferences/", include("userprefs.urls")),
 ]
 
-# --- A CORREÇÃO MÁGICA ---
-# Isso diz ao Django: "Quando alguém acessar /media/, entregue os arquivos da pasta MEDIA_ROOT"
+# Servir arquivos de mídia em desenvolvimento
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

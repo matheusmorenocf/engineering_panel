@@ -8,7 +8,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const token = request.headers.get('Authorization');
     
-    const internalUrl = `http://${backendHost}:${backendPort}/api/catalog/management/drawings?${searchParams.toString()}`;
+    // ✅ CORREÇÃO: Adicionada a barra '/' antes do '?'
+    const internalUrl = `http://${backendHost}:${backendPort}/api/catalog/management/drawings/?${searchParams.toString()}`;
     
     console.log('[DRAWINGS] GET:', internalUrl);
 
@@ -40,7 +41,8 @@ export async function POST(request: Request) {
     const token = request.headers.get('Authorization');
     const body = await request.json();
     
-    const internalUrl = `http://${backendHost}:${backendPort}/api/catalog/management/drawings`;
+    // ✅ CORREÇÃO: Adicionada a barra '/' ao final da URL
+    const internalUrl = `http://${backendHost}:${backendPort}/api/catalog/management/drawings/`;
     
     console.log('[DRAWINGS] POST:', internalUrl, body);
 

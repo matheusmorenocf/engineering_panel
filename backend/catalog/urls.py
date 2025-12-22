@@ -1,24 +1,22 @@
+# backend/catalog/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from .views import SectorViewSet, ProductTypeViewSet, ProductViewSet, ProductCatalogView
 
-from .views import (
-    ProductCatalogView,
-    SectorViewSet,
-    ProductTypeViewSet,
-    ProductViewSet,
-    DrawingViewSet,
-)
+# Se o DrawingViewSet estiver no catalog/views.py use este, 
+# se estiver no drawings/views.py, importe de lá.
+from .views import DrawingViewSet 
 
 router = DefaultRouter()
-router.register(r'management/sectors', SectorViewSet, basename='sectors')
-router.register(r'management/types', ProductTypeViewSet, basename='types')
-router.register(r'management/products', ProductViewSet, basename='products')
-router.register(r'management/drawings', DrawingViewSet, basename='drawings')
+router.register(r'management/sectors', SectorViewSet, basename='manage-sectors')
+router.register(r'management/types', ProductTypeViewSet, basename='manage-types')
+router.register(r'management/products', ProductViewSet, basename='manage-products')
+router.register(r'management/drawings', DrawingViewSet, basename='manage-drawings')
 
 urlpatterns = [
-    # Catálogo (Leitura do Protheus)
-    path('products/', ProductCatalogView.as_view(), name='product-catalog'),
-
-    # Gestão (CRUD de Tabelas Locais)
+    # Rota do Smart Catalog (Protheus)
+    path('products/', ProductCatalogView.as_view(), name='catalog-products'),
+    
+    # Rotas de Gestão (Sectores, Tipos, Vínculos, Desenhos)
     path('', include(router.urls)),
 ]

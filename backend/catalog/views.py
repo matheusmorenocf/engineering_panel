@@ -7,14 +7,12 @@ from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-# ✅ IMPORTAÇÃO CORRETA (Os modelos ficam no models.py)
 from .models import SB1010, Product, Sector, ProductType
 from drawings.models import Drawing
 from .serializers import SectorSerializer, ProductTypeSerializer, ProductSerializer
 from drawings.serializers import DrawingSerializer
 
-# ===== VIEWSETS PARA GESTÃO (CRUD) =====
-
+# ViewSets padrão para CRUD
 class SectorViewSet(viewsets.ModelViewSet):
     queryset = Sector.objects.all().order_by('name')
     serializer_class = SectorSerializer
@@ -41,8 +39,8 @@ class DrawingViewSet(viewsets.ModelViewSet):
     queryset = Drawing.objects.all().order_by('code')
     serializer_class = DrawingSerializer
     permission_classes = [IsAuthenticated]
-
-# ===== VIEW PRINCIPAL DO CATÁLOGO =====
+    # Habilita busca por código
+    search_fields = ['code']
 
 class ProductCatalogView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
