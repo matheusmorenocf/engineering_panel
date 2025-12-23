@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import api from "@/libs/api";
 
 interface User {
   id: string;
@@ -10,6 +11,7 @@ interface User {
   isSuperuser: boolean;
   permissions: string[];
   groups: string[];
+  preferences?: any;
 }
 
 interface AuthContextType {
@@ -23,64 +25,82 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Demo user for frontend demonstration
-const DEMO_USER: User = {
-  id: "1",
-  username: "engenheiro",
-  firstName: "Carlos",
-  lastName: "Silva",
-  email: "carlos.silva@empresa.com",
-  isStaff: true,
-  isSuperuser: false,
-  permissions: [
-    "catalog.view_product",
-    "catalog.add_product",
-    "catalog.change_product",
-    "catalog.delete_product",
-    "drawings.view_drawing",
-    "drawings.add_drawing",
-    "orders.view_productionorder",
-  ],
-  groups: ["Engenharia", "Projetos"],
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Função para buscar dados do perfil (reutilizável)
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      const response = await api.get("/api/user/me/");
+      const userData = response.data;
+      
+      const formattedUser: User = {
+        id: String(userData.id),
+        username: userData.username,
+        firstName: userData.first_name,
+        lastName: userData.last_name || "",
+        email: userData.email || "",
+        isStaff: userData.is_staff,
+        isSuperuser: userData.is_superuser,
+        permissions: userData.permissions || [],
+        groups: userData.groups || [],
+        preferences: userData.preferences
+      };
+
+      setUser(formattedUser);
+      localStorage.setItem("@App:user", JSON.stringify(formattedUser));
+      return formattedUser;
+    } catch (error) {
+      logout();
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
-    // Check for existing session
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const storedUser = localStorage.getItem("@App:user");
+    const token = localStorage.getItem("@App:token");
+
+    if (token) {
+      api.defaults.headers.Authorization = `Bearer ${token}`;
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      } else {
+        fetchUserProfile();
+      }
     }
     setIsLoading(false);
-  }, []);
+  }, [fetchUserProfile]);
 
   const login = useCallback(async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    // Demo authentication (in production, this would be a real API call)
-    if (username && password) {
-      const authenticatedUser = { ...DEMO_USER, username };
-      setUser(authenticatedUser);
-      localStorage.setItem("user", JSON.stringify(authenticatedUser));
+    try {
+      // 1. Obtém o Token
+      const response = await api.post("/api/token/", { username, password });
+      const { access, refresh } = response.data;
+
+      localStorage.setItem("@App:token", access);
+      localStorage.setItem("@App:refresh", refresh);
+      api.defaults.headers.Authorization = `Bearer ${access}`;
+
+      // 2. Busca os dados reais do perfil que você criou no urls.py
+      await fetchUserProfile();
+      
       setIsLoading(false);
       return true;
+    } catch (error) {
+      console.error("Erro na autenticação:", error);
+      setIsLoading(false);
+      return false;
     }
-    
-    setIsLoading(false);
-    return false;
-  }, []);
+  }, [fetchUserProfile]);
 
   const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem("user");
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("@App:user");
+    localStorage.removeItem("@App:token");
+    localStorage.removeItem("@App:refresh");
+    delete api.defaults.headers.Authorization;
   }, []);
 
   const hasPermission = useCallback(
@@ -88,14 +108,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!user) return false;
       if (user.isSuperuser) return true;
       
-      const normalizedPermission = permission.includes(".")
-        ? permission
-        : `catalog.${permission}`;
-      
-      return user.permissions.includes(normalizedPermission);
+      // Verifica se a permissão existe na lista retornada pelo Django
+      return user.permissions.includes(permission);
     },
     [user]
   );
+const updatePreferences = useCallback(async (newPrefs: Record<string, any>) => {
+    try {
+      // Usamos PATCH para aproveitar a lógica de merge que você criou no views.py
+      const response = await api.patch("/api/preferences/me/", newPrefs);
+      
+      if (user) {
+        const updatedUser = { 
+          ...user, 
+          preferences: response.data.data // seu serializer retorna { data: {...} }
+        };
+        setUser(updatedUser);
+        localStorage.setItem("@App:user", JSON.stringify(updatedUser));
+      }
+      return true;
+    } catch (error) {
+      console.error("Erro ao salvar preferências no servidor:", error);
+      return false;
+    }
+  }, [user]);
 
   return (
     <AuthContext.Provider
@@ -106,13 +142,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         hasPermission,
+        updatePreferences, // Exponha a função aqui
       }}
     >
-      {children}
+      {!isLoading && children}
     </AuthContext.Provider>
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
