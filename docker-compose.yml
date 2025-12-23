@@ -1,5 +1,3 @@
-# Default compose = dev
-
 version: "3.9"
 
 services:
@@ -39,7 +37,8 @@ services:
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       DATABASE_HOST: db
       DATABASE_PORT: "5432"
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://frontend:3000}
+      # ATENÇÃO: Atualizei a porta permitida para o novo padrão do Vite (5173)
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://frontend:5173}
     depends_on:
       - db
     networks:
@@ -50,19 +49,17 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: unless-stopped
-    command: npm run dev -- --webpack
+    # O comando do Vite agora usa --host para permitir conexões externas ao container
+    command: npm run dev -- --host
     volumes:
       - ./frontend:/app
       - /app/node_modules
-      - /app/.next
+      # Removi o volume do .next que não existe mais no Vite
     ports:
-      - "3000:3000"
+      - "5173:5173" # Porta padrão do Vite
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:8000}
-      WATCHPACK_POLLING: "true"
-      WATCHPACK_POLL_INTERVAL: "1000"
-      CHOKIDAR_USEPOLLING: "true"
-      CHOKIDAR_INTERVAL: "1000"
+      # No Vite, variáveis de ambiente precisam começar com VITE_
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
     depends_on:
       - backend
     networks:

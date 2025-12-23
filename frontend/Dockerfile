@@ -1,28 +1,21 @@
-# ============================================
-# FRONTEND DOCKERFILE - Next.js
-# Painel Engenharia
-# Otimizado para desenvolvimento com hot reload
-# ============================================
-
+# Usa uma imagem leve do Node.js
 FROM node:20-slim
 
-# Variáveis de ambiente
-ENV NODE_ENV=development
-
-# Diretório de trabalho
+# Define o diretório de trabalho dentro do container
 WORKDIR /app
 
-# Copiar arquivos de dependências
+# Copia os arquivos de configuração de pacotes
 COPY package*.json ./
 
-# Instalar dependências
+# Instala as dependências
 RUN npm install
 
-# Copiar o restante dos arquivos
+# Copia todo o código do frontend para o container
 COPY . .
 
-# Expor porta do Next.js
-EXPOSE 3000
+# Expõe a porta padrão que o Vite utiliza
+EXPOSE 5173
 
-# Comando para desenvolvimento (hot reload)
-CMD ["npm", "run", "dev"]
+# Comando para rodar o servidor de desenvolvimento do Vite
+# O parâmetro --host é crucial para que o Docker consiga acessar o servidor
+CMD ["npm", "run", "dev", "--", "--host"]

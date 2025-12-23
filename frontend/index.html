@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel Engenharia V3 | Sistema de Gestão</title>
+    <meta name="description" content="Sistema de Gestão de Engenharia integrado com ERP Protheus. Gerencie desenhos técnicos, catálogo de produtos e ordens de produção." />
+    <meta name="keywords" content="engenharia, gestão, ERP, Protheus, desenhos técnicos, catálogo, produção" />
+    <meta name="theme-color" content="#3b82f6" />
+    
+    <meta property="og:title" content="Painel Engenharia V3" />
+    <meta property="og:description" content="Sistema de Gestão de Engenharia integrado com ERP Protheus" />
+    <meta property="og:type" content="website" />
+    
+    <script>
+      // Prevent flash of wrong theme
+      (function() {
+        const colorMode = localStorage.getItem('colorMode') || 'dark';
+        const colorTheme = localStorage.getItem('colorTheme') || 'default';
+        
+        if (colorMode === 'dark' || (colorMode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+        
+        if (colorTheme && colorTheme !== 'default') {
+          document.documentElement.setAttribute('data-theme', colorTheme);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

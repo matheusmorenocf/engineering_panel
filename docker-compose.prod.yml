@@ -8,6 +8,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # Em PROD, removemos o mapeamento de porta (5433:5432) 
+    # para que o banco não fique exposto à internet.
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -34,7 +36,8 @@ services:
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
       DATABASE_HOST: db
       DATABASE_PORT: "5432"
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      # Atualizado para a porta 5173 (ou o seu domínio final)
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-1}
       DJANGO_HSTS_SECONDS: ${DJANGO_HSTS_SECONDS:-3600}
     depends_on:
@@ -42,18 +45,19 @@ services:
     networks:
       - painel_network
 
-  # Observação: idealmente o frontend em prod roda "npm run build" e "npm start"
-  # Aqui deixamos como base; ajuste conforme seu pipeline.
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod 
     restart: unless-stopped
-    command: npm run build && npm start -p 3000
+    # Vite em produção gera a pasta 'dist'. 
+    # Se você for usar apenas Node para servir (menos performático que Nginx):
+    command: sh -c "npm install -g serve && npm run build && serve -s dist -l 5173"
     ports:
-      - "3000:3000"
+      - "5173:5173"
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:8000}
+      # Variável corrigida para o padrão Vite
+      VITE_API_URL: ${VITE_API_URL:-http://backend:8000}
     depends_on:
       - backend
     networks:
