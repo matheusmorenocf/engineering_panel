@@ -59,7 +59,7 @@ services:
       - "5173:5173" # Porta padrão do Vite
     environment:
       # No Vite, variáveis de ambiente precisam começar com VITE_
-      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     depends_on:
       - backend
     networks:

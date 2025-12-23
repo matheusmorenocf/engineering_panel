@@ -7,7 +7,7 @@ djangorestframework
 djangorestframework-simplejwt
 
 # CORS
-django-cors-headers
+django-cors-headers==4.3.1
 
 # Database Drivers
 psycopg2-binary

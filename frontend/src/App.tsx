@@ -3,62 +3,50 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider } from "@/contexts/ThemeContext";
-import { ToastProvider } from "@/contexts/ToastContext";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import DashboardLayout from "./components/layout/DashboardLayout";
 
-// Pages
-import LoginPage from "@/pages/Login";
-import Dashboard from "@/pages/Dashboard";
-import CatalogPage from "@/pages/Catalog";
-import NotFound from "@/pages/NotFound";
-
-// Layout
-import DashboardLayout from "@/components/layout/DashboardLayout";
-
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/500.css";
-import "@fontsource/inter/600.css";
-import "@fontsource/inter/700.css";
-import "@fontsource/plus-jakarta-sans/500.css";
-import "@fontsource/plus-jakarta-sans/600.css";
-import "@fontsource/plus-jakarta-sans/700.css";
+// Importação das páginas
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Catalog from "./pages/Catalog";
+import NotFound from "./pages/NotFound";
+import Index from "./pages/Index";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <AuthProvider>
-        <ToastProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/login" element={<LoginPage />} />
-                
-                {/* Protected Routes */}
-                <Route element={<DashboardLayout />}>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/catalog" element={<CatalogPage />} />
-                  <Route path="/drawings" element={<Dashboard />} />
-                  <Route path="/orders" element={<Dashboard />} />
-                  <Route path="/settings" element={<Dashboard />} />
-                </Route>
+    <AuthProvider>
+      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Rota pública de Login */}
+              <Route path="/login" element={<Login />} />
+              
+              {/* Rota raiz/Landing page (opcional, redireciona ou mostra Index) */}
+              <Route path="/" element={<Index />} />
 
-                {/* Redirects */}
-                <Route path="/" element={<Navigate to="/login" replace />} />
-                
-                {/* 404 */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </ToastProvider>
-      </AuthProvider>
-    </ThemeProvider>
+              {/* Rotas protegidas dentro do DashboardLayout */}
+              <Route element={<DashboardLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/catalog" element={<Catalog />} />
+              </Route>
+
+              {/* Rota 404 - Not Found */}
+              <Route path="*" element={<NotFound />} />
+              
+              {/* Redirecionamento padrão caso não encontre nada */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
