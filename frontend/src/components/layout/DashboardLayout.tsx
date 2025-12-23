@@ -1,11 +1,10 @@
 import React from "react";
 import { Outlet, Navigate } from "react-router-dom";
-
-import { Loader2 } from "lucide-react";
+import Sidebar from "@/components/layout/Sidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import Sidebar from "@/Sidebar";
+import { Loader2 } from "lucide-react";
 
-export const DashboardLayout = () {
+export default function DashboardLayout() {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {

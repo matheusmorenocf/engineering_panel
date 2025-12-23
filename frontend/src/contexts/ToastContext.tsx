@@ -29,7 +29,7 @@ const toastStyles: Record<ToastType, string> = {
   info: "border-info/30 bg-info/10",
 };
 
-export const ToastProvider = ({ children }: { children: React.ReactNode }) {
+export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((message: string, type: ToastType) => {
@@ -81,7 +81,7 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useToastContext = () {
+export function useToastContext() {
   const context = useContext(ToastContext);
   if (!context) {
     throw new Error("useToastContext must be used within a ToastProvider");

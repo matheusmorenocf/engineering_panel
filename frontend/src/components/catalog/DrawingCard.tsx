@@ -19,7 +19,7 @@ interface DrawingCardProps {
   style?: React.CSSProperties;
 }
 
-export const DrawingCard = ({ drawing, viewMode, onClick, style }: DrawingCardProps) {
+export default function DrawingCard({ drawing, viewMode, onClick, style }: DrawingCardProps) {
   const truncateText = (text: string, maxLength: number) => {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + "...";

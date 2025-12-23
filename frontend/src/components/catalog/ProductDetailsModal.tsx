@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { X, Image as ImageIcon, Package, FileText, Settings, DollarSign, Pencil, Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToastContext } from "@/contexts/ToastContext";
-import { Button } from "@/ui/button";
-
 
 interface Drawing {
   id: string;
@@ -31,7 +30,7 @@ const tabs = [
   { id: "desenho", label: "Desenho", icon: Pencil },
 ];
 
-export const ProductDetailsModal = ({ drawing, onClose, sectors, types }: ProductDetailsModalProps) {
+export default function ProductDetailsModal({ drawing, onClose, sectors, types }: ProductDetailsModalProps) {
   const [activeTab, setActiveTab] = useState("cadastrais");
   const [selectedSector, setSelectedSector] = useState(drawing.sector);
   const [selectedType, setSelectedType] = useState(drawing.type);
