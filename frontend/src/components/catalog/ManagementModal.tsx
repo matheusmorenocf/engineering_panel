@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { X, Plus, Trash2, Loader2, AlertTriangle } from "lucide-react";
-import { useToastContext } from "../../contexts/ToastContext";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
+import { useToastContext } from "@/contexts/ToastContext";
+import { Input } from "@/ui/input";
+import { Button } from "@/ui/button";
 
 
 interface ManagementModalProps {
@@ -11,7 +11,7 @@ interface ManagementModalProps {
   types: string[];
 }
 
-export default function ManagementModal({ onClose, sectors: initialSectors, types: initialTypes }: ManagementModalProps) {
+export const ManagementModal = ({ onClose, sectors: initialSectors, types: initialTypes }: ManagementModalProps) {
   const [activeTab, setActiveTab] = useState<"sectors" | "types">("sectors");
   const [sectors, setSectors] = useState(initialSectors);
   const [types, setTypes] = useState(initialTypes);

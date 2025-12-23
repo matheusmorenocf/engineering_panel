@@ -37,9 +37,9 @@ ALLOWED_HOSTS = ['*']
 # =========================================================
 # ✅ Em Docker, o frontend chama o backend pelo nome do container
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",      # Acesso do navegador local
-    "http://frontend:3000",       # Container frontend (interno)
-    "http://127.0.0.1:3000",      # Fallback
+    "http://localhost:5173",      # Acesso do navegador local
+    "http://frontend:5173",       # Container frontend (interno)
+    "http://127.0.0.1:5173",      # Fallback
 ]
 
 # ✅ CRÍTICO: Permitir credenciais (JWT)
@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django-cors-headers",
 
     # Third party
     "rest_framework",

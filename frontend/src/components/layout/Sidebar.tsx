@@ -16,9 +16,9 @@ import {
   Monitor,
   Check,
 } from "lucide-react";
-import { useTheme, type ColorMode, type ColorTheme } from "../../contexts/ThemeContext";
-import { useToastContext } from "../../contexts/ToastContext";
-import { useAuth } from "../../contexts/AuthContext";
+import { useTheme, type ColorMode, type ColorTheme } from "@/contexts/ThemeContext";
+import { useToastContext } from "@/contexts/ToastContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 const navItems = [
@@ -43,7 +43,7 @@ const colorModes: { id: ColorMode; label: string; icon: React.ComponentType<any>
   { id: "system", label: "Sistema", icon: Monitor },
 ];
 
-export default function Sidebar() {
+export const Sidebar = () {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const location = useLocation();
