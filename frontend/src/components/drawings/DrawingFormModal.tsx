@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { format, isAfter, parseISO } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn } from "@/lib/utils"; // CORREÇÃO: Importação do cn adicionada
+import { cn } from "@/libs/utils"; // CORREÇÃO: Importação do cn adicionada
 
 interface TimelineEvent {
   id: string;

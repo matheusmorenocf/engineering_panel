@@ -241,10 +241,27 @@
   }
 
   /* Industrial Design Components */
-  [data-design="industrial"] .glass-panel {
-    @apply bg-card/40 backdrop-blur-md border-border/30;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  }
+/* --- ESTILO PADRÃO (Sólido e Visível) --- */
+:not([data-design="industrial"]) .menu-item-active {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  @apply shadow-md;
+}
+
+/* Garante que o ícone e o texto fiquem brancos/claros no modo padrão ativo */
+:not([data-design="industrial"]) .menu-item-active svg,
+:not([data-design="industrial"]) .menu-item-active span {
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+/* --- ESTILO INDUSTRIAL (Transparência/Glass) --- */
+[data-design="industrial"] .menu-item-active {
+  background-color: hsla(var(--primary), 0.15) !important;
+  color: hsl(var(--primary)) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  @apply border border-primary/20 shadow-sm;
+}
 
   [data-design="industrial"] .card-kpi {
     @apply rounded-[2.5rem] p-8 transition-all duration-500;

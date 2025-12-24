@@ -14,8 +14,8 @@ from .serializers import (
     PermissionSerializer
 )
 
-# --- PREFERÊNCIAS INDIVIDUAIS (USUÁRIO LOGADO) ---
-@api_view(["GET", "PATCH", "POST"]) # Adicionei POST pois o front pode tentar enviar assim
+# --- PREFERÊNCIAS INDIVIDUAIS ---
+@api_view(["GET", "PATCH", "POST"])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def preferences_me(request):
@@ -24,22 +24,28 @@ def preferences_me(request):
     if request.method == "GET":
         return Response({"data": prefs_obj.data})
 
-    # No PATCH/POST, o front envia { data: { ... } } ou apenas o objeto
     incoming = request.data.get('data') if 'data' in request.data else request.data
 
     if not isinstance(incoming, dict):
         return Response({"detail": "Body must be a JSON object."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Lógica de Merge
-    current = dict(prefs_obj.data) # Cria uma cópia real
-    current.update(incoming)
+    # TRAVA DE SEGURANÇA BACKEND: Remove chaves sensíveis e protege contra injeção de campos
+    sensitive_keys = {
+        'password', 'token', 'refresh', 'access', 'username', 'email', 
+        'is_staff', 'is_superuser', 'id', 'user_id'
+    }
+    filtered_incoming = {k: v for k, v in incoming.items() if k.lower() not in sensitive_keys}
+
+    # Lógica de Merge Robusta
+    current = prefs_obj.data if isinstance(prefs_obj.data, dict) else {}
+    current.update(filtered_incoming)
     
     prefs_obj.data = current
-    prefs_obj.save() # Remova o update_fields para garantir que o sinal de post_save funcione se necessário
+    prefs_obj.save()
 
     return Response({"status": "success", "data": prefs_obj.data})
 
-# --- VIEWS PARA GESTÃO DE USUÁRIOS E GRUPOS ---
+# --- VIEWS RESTANTES MANTIDAS SEM ALTERAÇÃO ---
 class UserAdminViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-id')
     serializer_class = UserAdminSerializer
@@ -59,42 +65,28 @@ class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAdminUser]
     pagination_class = None
 
-# --- CONFIGURAÇÕES GLOBAIS DO SISTEMA (PAGES TAB) ---
 class UserPreferencesView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get_system_user(self):
-        # Retorna o primeiro superuser (ID 1 geralmente)
         return User.objects.filter(is_superuser=True).order_by('id').first()
 
     def get(self, request):
         system_user = self.get_system_user()
         if not system_user:
             return Response({"error": "Admin não encontrado"}, status=404)
-            
         prefs, _ = UserPreferences.objects.get_or_create(user=system_user)
-        serializer = UserPreferencesSerializer(prefs)
-        # Retornamos o envelope 'data' para manter compatibilidade com o front
-        return Response({"data": serializer.data['data']})
+        return Response({"data": prefs.data})
 
     def post(self, request):
         if not request.user.is_superuser:
             return Response({"detail": "Não autorizado."}, status=status.HTTP_403_FORBIDDEN)
-
         system_user = self.get_system_user()
         prefs, _ = UserPreferences.objects.get_or_create(user=system_user)
-        
-        # O front envia { data: { ... } }
         incoming_data = request.data.get('data', {})
-        
-        # Garantimos que estamos salvando o objeto limpo e atualizado
-        # Se você quiser MERGE total:
         current_data = prefs.data if isinstance(prefs.data, dict) else {}
         current_data.update(incoming_data)
         prefs.data = current_data
-        
-        # Forçamos a marcação de que o campo JSON foi alterado
         prefs.save() 
-        
         return Response({"status": "success", "data": prefs.data})

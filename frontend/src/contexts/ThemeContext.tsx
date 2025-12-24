@@ -17,36 +17,29 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { user, updatePreferences } = useAuth();
 
-  // Estados iniciais baseados no localStorage para evitar "flash" de luz/cor ao carregar
   const [colorTheme, setColorThemeState] = useState<ColorTheme>(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("colorTheme") as ColorTheme) || "default";
-    }
-    return "default";
+    return (localStorage.getItem("colorTheme") as ColorTheme) || "default";
   });
 
   const [colorMode, setColorModeState] = useState<ColorMode>(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("colorMode") as ColorMode) || "dark";
-    }
-    return "dark";
+    return (localStorage.getItem("colorMode") as ColorMode) || "dark";
   });
 
   const [isDark, setIsDark] = useState(true);
 
-  // Sincroniza estados quando o usuário loga e traz preferências do DB
+  // NOVO: Sincroniza com as preferências do banco de dados assim que o utilizador carrega
   useEffect(() => {
     if (user?.preferences) {
-      if (user.preferences.colorTheme) {
+      if (user.preferences.colorTheme && user.preferences.colorTheme !== colorTheme) {
         setColorThemeState(user.preferences.colorTheme);
       }
-      if (user.preferences.colorMode) {
+      if (user.preferences.colorMode && user.preferences.colorMode !== colorMode) {
         setColorModeState(user.preferences.colorMode);
       }
     }
-  }, [user]);
+  }, [user?.preferences]);
 
-  // Aplicação do Tema de Cores (emerald, ruby, etc)
+  // Aplicação do Tema de Cores
   useEffect(() => {
     const root = document.documentElement;
     root.removeAttribute("data-theme");
@@ -83,7 +76,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("colorMode", colorMode);
   }, [colorMode]);
 
-  // Funções para alterar e persistir no backend
   const setColorTheme = useCallback((theme: ColorTheme) => {
     setColorThemeState(theme);
     if (user) {

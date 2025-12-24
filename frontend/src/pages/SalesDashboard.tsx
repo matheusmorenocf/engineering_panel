@@ -12,7 +12,7 @@ import {
   Package,
   ArrowUpRight
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/libs/utils";
 
 // GaugeChart ajustado para não estourar 100% visualmente
 const GaugeChart = ({ value, color, size = "lg", targetLabel }: { value: number; color: string; size?: "sm" | "lg"; targetLabel?: string }) => {

@@ -2,7 +2,7 @@ import React from "react";
 import { Filter, User, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { cn } from "@/libs/utils";
 
 interface FilterOption {
   id: string;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Layout, EyeOff, Save, RefreshCw, ChevronDown, ChevronUp, Wrench, TrendingUp } from "lucide-react"; // Import TrendingUp
+import { Layout, EyeOff, Save, RefreshCw, ChevronDown, ChevronUp, Wrench, TrendingUp, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,8 +16,9 @@ export function PagesTab() {
   const [pageStatus, setPageStatus] = useState({
     catalog: true,
     drawings: true,
-    sales: true, // 1. Adicionado sales ao estado inicial
+    sales: true,
     orders: true,
+    physical: true, // Adicionado aqui
     dashboard: true,
     drawing_elaboration: true,
     drawing_verification: true,
@@ -92,7 +93,7 @@ export function PagesTab() {
               <Switch checked={pageStatus.catalog} onCheckedChange={() => handleToggle('catalog')} />
             </div>
 
-            {/* Sales Dashboard - NOVO ITEM ADICIONADO AQUI */}
+            {/* Sales Dashboard */}
             <div className="flex items-center justify-between p-4 border rounded-xl bg-background/50">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${pageStatus.sales ? 'bg-blue-500/10 text-blue-500' : 'bg-destructive/10 text-destructive'}`}>
@@ -161,6 +162,20 @@ export function PagesTab() {
                 </div>
               </div>
               <Switch checked={pageStatus.orders} onCheckedChange={() => handleToggle('orders')} />
+            </div>
+
+            {/* Controle Físico - NOVO ITEM ADICIONADO AQUI */}
+            <div className="flex items-center justify-between p-4 border rounded-xl bg-background/50">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${pageStatus.physical ? 'bg-purple-500/10 text-purple-500' : 'bg-destructive/10 text-destructive'}`}>
+                  {pageStatus.physical ? <Box className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                </div>
+                <div>
+                  <p className="font-bold text-sm">Controle Físico</p>
+                  <p className="text-[10px] text-muted-foreground font-mono">/physical-control</p>
+                </div>
+              </div>
+              <Switch checked={pageStatus.physical} onCheckedChange={() => handleToggle('physical')} />
             </div>
           </div>
         )}

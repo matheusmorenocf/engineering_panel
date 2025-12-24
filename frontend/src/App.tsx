@@ -17,13 +17,13 @@ import Drawings from "./pages/Drawings";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
-import SalesDashboard from "./pages/SalesDashboard"; // Importando o novo Dashboard
+import SalesDashboard from "./pages/SalesDashboard";
 import Settings from "./pages/Settings";
 import Maintenance from "./pages/Maintenance";
+import PhysicalControl from "./pages/PhysicalControl"; // Import novo
 
 const queryClient = new QueryClient();
 
-// Guardião de Manutenção
 const MaintenanceGuard = ({ children, pageId }: { children: React.ReactNode, pageId: string }) => {
   const { user } = useAuth();
   const [visible, setVisible] = useState<boolean | null>(null);
@@ -68,7 +68,6 @@ const MaintenanceGuard = ({ children, pageId }: { children: React.ReactNode, pag
   return <>{children}</>;
 };
 
-// Componente para proteger rotas autenticadas
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -87,7 +86,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Componente para proteger rotas exclusivas de Admin
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
@@ -100,7 +98,6 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => {
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Proteção contra fechamento acidental da aba
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isAuthenticated) {
@@ -122,7 +119,6 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      {/* Rota Raiz: Redirecionamento lógico baseado no estado de login */}
       <Route 
         path="/" 
         element={
@@ -137,7 +133,6 @@ const AppRoutes = () => {
       
       <Route path="/maintenance" element={<Maintenance />} />
 
-      {/* Rotas Protegidas dentro do Layout */}
       <Route
         element={
           <ProtectedRoute>
@@ -147,7 +142,6 @@ const AppRoutes = () => {
       >
         <Route path="/dashboard" element={<Dashboard />} />
 
-        {/* Rota de Vendas (Sales Dashboard) */}
         <Route 
           path="/sales" 
           element={
@@ -180,6 +174,15 @@ const AppRoutes = () => {
           element={
             <MaintenanceGuard pageId="orders">
               <div className="p-8">Módulo de Ordens de Produção</div>
+            </MaintenanceGuard>
+          } 
+        />
+
+        <Route 
+          path="/physical-control" 
+          element={
+            <MaintenanceGuard pageId="physical">
+              <PhysicalControl />
             </MaintenanceGuard>
           } 
         />

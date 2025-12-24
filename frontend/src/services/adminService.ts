@@ -16,9 +16,12 @@ export const adminService = {
   // Permissões
   getPermissions: () => api.get("userprefs/permissions/"),
 
-  // Preferências e Visibilidade (URLs Corrigidas)
+  // --- PREFERÊNCIAS GLOBAIS DO SISTEMA (PAGES TAB / VISIBILIDADE) ---
+  
+  // Busca as preferências do "System User" (Admin)
   getUserPreferences: () => api.get("userprefs/preferences/"),
   
-  // Enviamos o objeto 'data' diretamente, pois o backend recebe o JSONField
+  // Salva as preferências globais. 
+  // O backend espera { data: { ... } } conforme sua View Python 'UserPreferencesView'
   updateUserPreferences: (payload: any) => api.post("userprefs/preferences/", { data: payload }),
 };
