@@ -13,9 +13,6 @@ from userprefs.models import UserPreferences
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def get_user_profile(request):
-    """
-    Retorna os dados do usuário e sua lista de permissões simplificada.
-    """
     user_perms = []
     if request.user.is_authenticated:
         for perm in request.user.get_all_permissions():
@@ -30,6 +27,7 @@ def get_user_profile(request):
         'id': request.user.id,
         'username': request.user.username,
         'first_name': request.user.first_name or request.user.username,
+        'last_name': request.user.last_name or "",
         'is_staff': request.user.is_staff,
         'is_superuser': request.user.is_superuser,
         'permissions': user_perms,
@@ -47,12 +45,12 @@ urlpatterns = [
     # Perfil
     re_path(r'^api/user/me/?$', get_user_profile, name='user_profile'),
 
-    # ✅ DELEGUE TUDO DO CATÁLOGO PARA O APP CATALOG
+    # Catálogo
     path('api/catalog/', include('catalog.urls')),
 
-    path("api/preferences/", include("userprefs.urls")),
+    # UserPrefs - Importante: O prefixo aqui define a URL base do service
+    path("api/userprefs/", include("userprefs.urls")),
 ]
 
-# Servir arquivos de mídia em desenvolvimento
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

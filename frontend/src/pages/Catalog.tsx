@@ -21,68 +21,14 @@ import DrawingCard from "@/components/catalog/DrawingCard";
 import ProductDetailsModal from "@/components/catalog/ProductDetailsModal";
 import ManagementModal from "@/components/catalog/ManagementModal";
 
-// Mock data for demonstration
+// Mock data permanece o mesmo
 const MOCK_DRAWINGS = [
-  {
-    id: "PG448",
-    drawingId: "PG448",
-    sector: "FUNDIÇÃO",
-    type: "PEÇA MECÂNICA",
-    items_count: 5,
-    products: "PROD001; PROD002; PROD003",
-    descriptions: "EIXO PRINCIPAL DIAMETRO 50MM; EIXO SECUNDÁRIO; FLANGE ESPECIAL",
-    imageUrl: null,
-  },
-  {
-    id: "PG449",
-    drawingId: "PG449",
-    sector: "USINAGEM",
-    type: "COMPONENTE",
-    items_count: 3,
-    products: "COMP100; COMP101",
-    descriptions: "BUCHA DE BRONZE; ROLAMENTO AXIAL",
-    imageUrl: null,
-  },
-  {
-    id: "PG450",
-    drawingId: "PG450",
-    sector: "MONTAGEM",
-    type: "CONJUNTO",
-    items_count: 8,
-    products: "CONJ200; CONJ201; CONJ202; CONJ203",
-    descriptions: "CONJUNTO TRANSMISSÃO; KIT VEDAÇÃO; SUPORTE FIXAÇÃO",
-    imageUrl: null,
-  },
-  {
-    id: "AT125",
-    drawingId: "AT125",
-    sector: "CALDEIRARIA",
-    type: "ESTRUTURA",
-    items_count: 2,
-    products: "EST300; EST301",
-    descriptions: "VIGA PRINCIPAL; SUPORTE LATERAL",
-    imageUrl: null,
-  },
-  {
-    id: "AT126",
-    drawingId: "AT126",
-    sector: "FUNDIÇÃO",
-    type: "PEÇA MECÂNICA",
-    items_count: 4,
-    products: "PROD500; PROD501; PROD502",
-    descriptions: "CARCAÇA MOTOR; TAMPA FRONTAL; FLANGE TRASEIRO",
-    imageUrl: null,
-  },
-  {
-    id: "MX789",
-    drawingId: "MX789",
-    sector: "USINAGEM",
-    type: "COMPONENTE",
-    items_count: 6,
-    products: "COMP600; COMP601; COMP602; COMP603",
-    descriptions: "PINO GUIA; ANEL TRAVA; ESPAÇADOR; ARRUELA ESPECIAL",
-    imageUrl: null,
-  },
+  { id: "PG448", drawingId: "PG448", sector: "FUNDIÇÃO", type: "PEÇA MECÂNICA", items_count: 5, products: "PROD001; PROD002; PROD003", descriptions: "EIXO PRINCIPAL DIAMETRO 50MM; EIXO SECUNDÁRIO; FLANGE ESPECIAL", imageUrl: null },
+  { id: "PG449", drawingId: "PG449", sector: "USINAGEM", type: "COMPONENTE", items_count: 3, products: "COMP100; COMP101", descriptions: "BUCHA DE BRONZE; ROLAMENTO AXIAL", imageUrl: null },
+  { id: "PG450", drawingId: "PG450", sector: "MONTAGEM", type: "CONJUNTO", items_count: 8, products: "CONJ200; CONJ201; CONJ202; CONJ203", descriptions: "CONJUNTO TRANSMISSÃO; KIT VEDAÇÃO; SUPORTE FIXAÇÃO", imageUrl: null },
+  { id: "AT125", drawingId: "AT125", sector: "CALDEIRARIA", type: "ESTRUTURA", items_count: 2, products: "EST300; EST301", descriptions: "VIGA PRINCIPAL; SUPORTE LATERAL", imageUrl: null },
+  { id: "AT126", drawingId: "AT126", sector: "FUNDIÇÃO", type: "PEÇA MECÂNICA", items_count: 4, products: "PROD500; PROD501; PROD502", descriptions: "CARCAÇA MOTOR; TAMPA FRONTAL; FLANGE TRASEIRO", imageUrl: null },
+  { id: "MX789", drawingId: "MX789", sector: "USINAGEM", type: "COMPONENTE", items_count: 6, products: "COMP600; COMP601; COMP602; COMP603", descriptions: "PINO GUIA; ANEL TRAVA; ESPAÇADOR; ARRUELA ESPECIAL", imageUrl: null },
 ];
 
 const SECTORS = ["FUNDIÇÃO", "USINAGEM", "MONTAGEM", "CALDEIRARIA", "PINTURA"];
@@ -96,7 +42,6 @@ export default function CatalogPage() {
   const [drawings, setDrawings] = useState(MOCK_DRAWINGS);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   
-  // Filters
   const [searchCode, setSearchCode] = useState("");
   const [searchDescription, setSearchDescription] = useState("");
   const [searchDrawing, setSearchDrawing] = useState("");
@@ -105,32 +50,20 @@ export default function CatalogPage() {
   const [onlyMapped, setOnlyMapped] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   
-  // Modals
   const [selectedDrawing, setSelectedDrawing] = useState<typeof MOCK_DRAWINGS[0] | null>(null);
   const [showManagement, setShowManagement] = useState(false);
 
   useEffect(() => {
-    // Simulate loading
     setTimeout(() => setIsLoading(false), 800);
   }, []);
 
   const filteredDrawings = useMemo(() => {
     return drawings.filter((drawing) => {
-      if (searchCode && !drawing.products.toLowerCase().includes(searchCode.toLowerCase())) {
-        return false;
-      }
-      if (searchDescription && !drawing.descriptions.toLowerCase().includes(searchDescription.toLowerCase())) {
-        return false;
-      }
-      if (searchDrawing && !drawing.drawingId.toLowerCase().includes(searchDrawing.toLowerCase())) {
-        return false;
-      }
-      if (selectedSectors.length > 0 && !selectedSectors.includes(drawing.sector)) {
-        return false;
-      }
-      if (selectedTypes.length > 0 && !selectedTypes.includes(drawing.type)) {
-        return false;
-      }
+      if (searchCode && !drawing.products.toLowerCase().includes(searchCode.toLowerCase())) return false;
+      if (searchDescription && !drawing.descriptions.toLowerCase().includes(searchDescription.toLowerCase())) return false;
+      if (searchDrawing && !drawing.drawingId.toLowerCase().includes(searchDrawing.toLowerCase())) return false;
+      if (selectedSectors.length > 0 && !selectedSectors.includes(drawing.sector)) return false;
+      if (selectedTypes.length > 0 && !selectedTypes.includes(drawing.type)) return false;
       return true;
     });
   }, [drawings, searchCode, searchDescription, searchDrawing, selectedSectors, selectedTypes]);
@@ -160,9 +93,9 @@ export default function CatalogPage() {
     selectedSectors.length > 0 || selectedTypes.length > 0 || onlyMapped;
 
   return (
-    <div className="min-h-screen p-6 lg:p-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+    <div className="h-screen flex flex-col p-6 lg:p-8 animate-fade-in overflow-hidden">
+      {/* Header - Fixo no topo */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 flex-shrink-0">
         <div>
           <h1 className="text-3xl font-display font-bold text-foreground mb-1">
             Catálogo de Produtos
@@ -179,7 +112,7 @@ export default function CatalogPage() {
               Gerenciar Parâmetros
             </Button>
           )}
-          <div className="flex items-center border border-border rounded-lg overflow-hidden">
+          <div className="flex items-center border border-border rounded-lg overflow-hidden bg-card">
             <button
               onClick={() => setViewMode("grid")}
               className={`p-2 transition-colors ${
@@ -200,9 +133,8 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      {/* Search & Filters */}
-      <div className="glass-panel rounded-xl p-4 mb-6">
-        {/* Main Search */}
+      {/* Search & Filters - Fixo no topo */}
+      <div className="glass-panel rounded-xl p-4 mb-6 flex-shrink-0">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -210,7 +142,7 @@ export default function CatalogPage() {
               placeholder="Código do produto..."
               value={searchCode}
               onChange={(e) => setSearchCode(e.target.value)}
-              className="pl-9"
+              className="pl-9 bg-background"
             />
           </div>
           <div className="relative">
@@ -219,7 +151,7 @@ export default function CatalogPage() {
               placeholder="Descrição..."
               value={searchDescription}
               onChange={(e) => setSearchDescription(e.target.value)}
-              className="pl-9"
+              className="pl-9 bg-background"
             />
           </div>
           <div className="relative">
@@ -228,12 +160,11 @@ export default function CatalogPage() {
               placeholder="Código do desenho..."
               value={searchDrawing}
               onChange={(e) => setSearchDrawing(e.target.value)}
-              className="pl-9"
+              className="pl-9 bg-background"
             />
           </div>
         </div>
 
-        {/* Filter Toggle */}
         <div className="flex items-center justify-between">
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -255,11 +186,9 @@ export default function CatalogPage() {
           )}
         </div>
 
-        {/* Advanced Filters */}
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-border animate-fade-in">
+          <div className="mt-4 pt-4 border-t border-border animate-fade-in overflow-y-auto max-h-[30vh]">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Sectors */}
               <div>
                 <p className="text-sm font-medium text-foreground mb-3">Setores</p>
                 <div className="flex flex-wrap gap-2">
@@ -267,13 +196,9 @@ export default function CatalogPage() {
                     <button
                       key={sector}
                       onClick={() => toggleSector(sector)}
-                      className={`
-                        px-3 py-1.5 text-xs font-medium rounded-full border transition-all
-                        ${selectedSectors.includes(sector)
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background border-border hover:border-primary/50"
-                        }
-                      `}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
+                        selectedSectors.includes(sector) ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:border-primary/50"
+                      }`}
                     >
                       {sector}
                     </button>
@@ -281,7 +206,6 @@ export default function CatalogPage() {
                 </div>
               </div>
 
-              {/* Types */}
               <div>
                 <p className="text-sm font-medium text-foreground mb-3">Tipos</p>
                 <div className="flex flex-wrap gap-2">
@@ -289,13 +213,9 @@ export default function CatalogPage() {
                     <button
                       key={type}
                       onClick={() => toggleType(type)}
-                      className={`
-                        px-3 py-1.5 text-xs font-medium rounded-full border transition-all
-                        ${selectedTypes.includes(type)
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background border-border hover:border-primary/50"
-                        }
-                      `}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
+                        selectedTypes.includes(type) ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:border-primary/50"
+                      }`}
                     >
                       {type}
                     </button>
@@ -303,90 +223,60 @@ export default function CatalogPage() {
                 </div>
               </div>
             </div>
-
-            {/* Only Mapped Toggle */}
-            <div className="mt-4 flex items-center gap-2">
-              <button
-                onClick={() => setOnlyMapped(!onlyMapped)}
-                className={`
-                  w-10 h-5 rounded-full transition-colors relative
-                  ${onlyMapped ? "bg-primary" : "bg-muted"}
-                `}
-              >
-                <div
-                  className={`
-                    absolute top-0.5 w-4 h-4 rounded-full bg-primary-foreground transition-transform
-                    ${onlyMapped ? "translate-x-5" : "translate-x-0.5"}
-                  `}
-                />
-              </button>
-              <span className="text-sm text-foreground">Apenas produtos mapeados</span>
-            </div>
           </div>
         )}
       </div>
 
-      {/* Active Filters Badges */}
+      {/* Badges de filtros - Também fixo */}
       {(selectedSectors.length > 0 || selectedTypes.length > 0) && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4 flex-shrink-0">
           {selectedSectors.map((sector) => (
-            <span
-              key={sector}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full"
-            >
+            <span key={sector} className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full border border-primary/20">
               {sector}
-              <button onClick={() => toggleSector(sector)}>
-                <X className="h-3 w-3" />
-              </button>
+              <button onClick={() => toggleSector(sector)}><X className="h-3 w-3" /></button>
             </span>
           ))}
           {selectedTypes.map((type) => (
-            <span
-              key={type}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-success/10 text-success text-xs font-medium rounded-full"
-            >
+            <span key={type} className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-500/10 text-emerald-600 text-xs font-medium rounded-full border border-emerald-500/20">
               {type}
-              <button onClick={() => toggleType(type)}>
-                <X className="h-3 w-3" />
-              </button>
+              <button onClick={() => toggleType(type)}><X className="h-3 w-3" /></button>
             </span>
           ))}
         </div>
       )}
 
-      {/* Results */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : filteredDrawings.length === 0 ? (
-        <div className="glass-panel rounded-xl p-12 text-center">
-          <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">
-            Nenhum resultado encontrado
-          </h3>
-          <p className="text-muted-foreground">
-            Tente ajustar os filtros para encontrar o que procura
-          </p>
-        </div>
-      ) : (
-        <div className={`
-          ${viewMode === "grid" 
-            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" 
-            : "flex flex-col gap-3"
-          }
-        `}>
-          {filteredDrawings.map((drawing, index) => (
-            <DrawingCard
-              key={drawing.id}
-              drawing={drawing}
-              viewMode={viewMode}
-              onClick={() => setSelectedDrawing(drawing)}
-              style={{ animationDelay: `${index * 50}ms` }}
-            />
-          ))}
-        </div>
-      )}
+      {/* Results - ÁREA COM SCROLL INTERNO */}
+      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : filteredDrawings.length === 0 ? (
+          <div className="glass-panel rounded-xl p-12 text-center">
+            <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum resultado encontrado</h3>
+            <p className="text-muted-foreground">Tente ajustar os filtros para encontrar o que procura</p>
+          </div>
+        ) : (
+          <div className={`
+            ${viewMode === "grid" 
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" 
+              : "flex flex-col gap-3"
+            }
+            pb-8
+          `}>
+            {filteredDrawings.map((drawing, index) => (
+              <DrawingCard
+                key={drawing.id}
+                drawing={drawing}
+                viewMode={viewMode}
+                onClick={() => setSelectedDrawing(drawing)}
+                style={{ animationDelay: `${index * 50}ms` }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Modals */}
       {selectedDrawing && (

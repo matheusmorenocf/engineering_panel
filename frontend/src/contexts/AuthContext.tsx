@@ -21,6 +21,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
+  updatePreferences: (newPrefs: Record<string, any>) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,10 +30,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Função para buscar dados do perfil (reutilizável)
+  const logout = useCallback(() => {
+    setUser(null);
+    localStorage.removeItem("@App:user");
+    localStorage.removeItem("@App:token");
+    localStorage.removeItem("@App:refresh");
+    delete api.defaults.headers.Authorization;
+  }, []);
+
   const fetchUserProfile = useCallback(async () => {
     try {
-      const response = await api.get("/api/user/me/");
+      const response = await api.get("user/me/");
       const userData = response.data;
       
       const formattedUser: User = {
@@ -55,37 +63,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout();
       return null;
     }
-  }, []);
+  }, [logout]);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("@App:user");
-    const token = localStorage.getItem("@App:token");
-
-    if (token) {
-      api.defaults.headers.Authorization = `Bearer ${token}`;
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      } else {
-        fetchUserProfile();
+    const initAuth = async () => {
+      const storedUser = localStorage.getItem("@App:user");
+      const token = localStorage.getItem("@App:token");
+      if (token) {
+        api.defaults.headers.Authorization = `Bearer ${token}`;
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+        // Sempre valida o token/perfil ao carregar o app
+        await fetchUserProfile();
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+    initAuth();
   }, [fetchUserProfile]);
 
   const login = useCallback(async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // 1. Obtém o Token
-      const response = await api.post("/api/token/", { username, password });
+      const response = await api.post("token/", { username, password });
       const { access, refresh } = response.data;
 
       localStorage.setItem("@App:token", access);
       localStorage.setItem("@App:refresh", refresh);
       api.defaults.headers.Authorization = `Bearer ${access}`;
 
-      // 2. Busca os dados reais do perfil que você criou no urls.py
       await fetchUserProfile();
-      
       setIsLoading(false);
       return true;
     } catch (error) {
@@ -95,33 +102,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [fetchUserProfile]);
 
-  const logout = useCallback(() => {
-    setUser(null);
-    localStorage.removeItem("@App:user");
-    localStorage.removeItem("@App:token");
-    localStorage.removeItem("@App:refresh");
-    delete api.defaults.headers.Authorization;
-  }, []);
-
   const hasPermission = useCallback(
     (permission: string): boolean => {
       if (!user) return false;
       if (user.isSuperuser) return true;
-      
-      // Verifica se a permissão existe na lista retornada pelo Django
       return user.permissions.includes(permission);
     },
     [user]
   );
-const updatePreferences = useCallback(async (newPrefs: Record<string, any>) => {
+
+  // FUNÇÃO CORRIGIDA
+  const updatePreferences = useCallback(async (newPrefs: Record<string, any>) => {
     try {
-      // Usamos PATCH para aproveitar a lógica de merge que você criou no views.py
-      const response = await api.patch("/api/preferences/me/", newPrefs);
+      // 1. URL corrigida para bater com o seu urls.py: userprefs/me/
+      // 2. Enviamos newPrefs diretamente para que o Python receba o dicionário
+      const response = await api.patch("userprefs/me/", newPrefs);
       
       if (user) {
+        // O seu backend retorna o objeto serializado, pegamos o campo 'data' dele
         const updatedUser = { 
           ...user, 
-          preferences: response.data.data // seu serializer retorna { data: {...} }
+          preferences: response.data.data || response.data 
         };
         setUser(updatedUser);
         localStorage.setItem("@App:user", JSON.stringify(updatedUser));
@@ -142,7 +143,7 @@ const updatePreferences = useCallback(async (newPrefs: Record<string, any>) => {
         login,
         logout,
         hasPermission,
-        updatePreferences, // Exponha a função aqui
+        updatePreferences,
       }}
     >
       {!isLoading && children}
@@ -150,7 +151,6 @@ const updatePreferences = useCallback(async (newPrefs: Record<string, any>) => {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

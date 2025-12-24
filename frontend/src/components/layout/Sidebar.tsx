@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -9,23 +9,24 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  User,
   Palette,
   Sun,
   Moon,
   Monitor,
   Check,
+  Wrench, // Ícone de manutenção
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme, ColorTheme, ColorMode } from "@/contexts/ThemeContext";
 import { useToastContext } from "@/contexts/ToastContext";
+import { adminService } from "@/services/adminService";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", permission: null },
-  { icon: Package, label: "Catálogo", path: "/catalog", permission: "catalog.view_product" },
-  { icon: FileText, label: "Desenhos", path: "/drawings", permission: "drawings.view_drawing" },
-  { icon: ClipboardList, label: "Ordens", path: "/orders", permission: "orders.view_productionorder" },
-  { icon: Settings, label: "Configurações", path: "/settings", permission: null },
+  { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", permission: null },
+  { id: "catalog", icon: Package, label: "Catálogo", path: "/catalog", permission: "catalog.view_product" },
+  { id: "drawings", icon: FileText, label: "Desenhos", path: "/drawings", permission: "drawings.view_drawing" },
+  { id: "orders", icon: ClipboardList, label: "Ordens", path: "/orders", permission: "orders.view_productionorder" },
+  { id: "settings", icon: Settings, label: "Configurações", path: "/settings", permission: "admin" },
 ];
 
 const colorThemes: { id: ColorTheme; label: string; color: string }[] = [
@@ -45,11 +46,24 @@ const colorModes: { id: ColorMode; label: string; icon: React.ComponentType<any>
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [pageVisibility, setPageVisibility] = useState<Record<string, boolean>>({});
+  
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, hasPermission } = useAuth();
   const { colorTheme, colorMode, setColorTheme, setColorMode } = useTheme();
   const { addToast } = useToastContext();
+
+  // Busca as preferências de visibilidade do servidor para sinalizar itens em manutenção
+  useEffect(() => {
+    adminService.getUserPreferences()
+      .then(res => {
+        if (res.data?.data?.pageVisibility) {
+          setPageVisibility(res.data.data.pageVisibility);
+        }
+      })
+      .catch(() => console.log("Erro ao carregar visibilidade no Sidebar"));
+  }, [location.pathname]); // Atualiza ao mudar de rota para garantir sincronia
 
   const handleLogout = () => {
     logout();
@@ -57,8 +71,10 @@ export default function Sidebar() {
     navigate("/login");
   };
 
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const getInitials = (firstName: string = "", lastName: string = "") => {
+    const f = firstName?.charAt(0) || "";
+    const l = lastName?.charAt(0) || "";
+    return (f + l).toUpperCase() || "U";
   };
 
   return (
@@ -88,28 +104,40 @@ export default function Sidebar() {
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
-          const isDisabled = item.permission && !hasPermission(item.permission);
+          const isUnderMaintenance = pageVisibility[item.id] === false;
+          
+          // Lógica de Permissões (quem não tem permissão nem vê o item)
+          if (item.permission === "admin" && !user?.isSuperuser) return null;
+          if (item.permission && item.permission !== "admin" && !hasPermission(item.permission)) return null;
 
           return (
             <Link
               key={item.path}
-              to={isDisabled ? "#" : item.path}
+              to={item.path}
               className={`
-                flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group
+                flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative
                 ${isActive
                   ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
-                  : isDisabled
-                    ? "text-sidebar-foreground/30 cursor-not-allowed"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }
                 ${isCollapsed ? "justify-center" : ""}
               `}
-              onClick={(e) => isDisabled && e.preventDefault()}
-              title={isCollapsed ? item.label : undefined}
+              title={isCollapsed ? (isUnderMaintenance ? `${item.label} (Em Manutenção)` : item.label) : undefined}
             >
               <item.icon className={`h-5 w-5 flex-shrink-0 ${isActive ? "" : "group-hover:scale-110 transition-transform"}`} />
+              
               {!isCollapsed && (
-                <span className="font-medium animate-fade-in">{item.label}</span>
+                <div className="flex items-center justify-between w-full animate-fade-in">
+                  <span className="font-medium text-sm">{item.label}</span>
+                  {isUnderMaintenance && (
+                    <Wrench className="h-3.5 w-3.5 text-amber-500 animate-pulse" title="Módulo em manutenção" />
+                  )}
+                </div>
+              )}
+
+              {/* Bolinha indicativa caso esteja colapsado */}
+              {isCollapsed && isUnderMaintenance && (
+                <div className="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full border border-sidebar shadow-sm" />
               )}
             </Link>
           );
@@ -132,23 +160,23 @@ export default function Sidebar() {
             </span>
           </div>
           {!isCollapsed && user && (
-            <div className="flex-1 text-left animate-fade-in">
-              <p className="text-sm font-medium truncate">{user.firstName} {user.lastName}</p>
-              <p className="text-xs text-sidebar-foreground/60 truncate">
-                {user.groups.join(", ")}
+            <div className="flex-1 text-left animate-fade-in overflow-hidden">
+              <p className="text-sm font-medium truncate">
+                {user.firstName} {user.lastName}
+              </p>
+              <p className="text-[10px] text-sidebar-foreground/60 truncate uppercase tracking-wider">
+                {user.isSuperuser ? "Administrador" : (user.groups?.[0] || "Sem Grupo")}
               </p>
             </div>
           )}
         </button>
 
-        {/* Dropdown Menu */}
         {showUserMenu && (
           <div className={`
             absolute bottom-full mb-2 bg-card rounded-xl shadow-lg border border-border overflow-hidden
             animate-scale-in z-50
             ${isCollapsed ? "left-16 w-56" : "left-3 right-3"}
           `}>
-            {/* Theme Section */}
             <div className="p-3 border-b border-border">
               <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
                 <Palette className="h-3 w-3" /> Tema de Cor
@@ -171,7 +199,6 @@ export default function Sidebar() {
               </div>
             </div>
 
-            {/* Mode Section */}
             <div className="p-3 border-b border-border">
               <p className="text-xs font-medium text-muted-foreground mb-2">Modo</p>
               <div className="flex gap-1">
@@ -195,7 +222,6 @@ export default function Sidebar() {
               </div>
             </div>
 
-            {/* Logout */}
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-2 px-3 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
@@ -207,7 +233,6 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* Collapse Button */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
         className="absolute -right-3 top-20 p-1.5 rounded-full bg-card border border-border shadow-md hover:bg-muted transition-colors"
