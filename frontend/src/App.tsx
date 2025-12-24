@@ -17,6 +17,7 @@ import Drawings from "./pages/Drawings";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
+import SalesDashboard from "./pages/SalesDashboard"; // Importando o novo Dashboard
 import Settings from "./pages/Settings";
 import Maintenance from "./pages/Maintenance";
 
@@ -145,6 +146,16 @@ const AppRoutes = () => {
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* Rota de Vendas (Sales Dashboard) */}
+        <Route 
+          path="/sales" 
+          element={
+            <MaintenanceGuard pageId="sales">
+              <SalesDashboard />
+            </MaintenanceGuard>
+          } 
+        />
         
         <Route 
           path="/catalog" 
@@ -196,7 +207,6 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            {/* O BrowserRouter fica aqui e ENVOLVE AppRoutes. AppRoutes NÃO deve ter outro Router dentro dele. */}
             <BrowserRouter>
               <AppRoutes />
             </BrowserRouter>

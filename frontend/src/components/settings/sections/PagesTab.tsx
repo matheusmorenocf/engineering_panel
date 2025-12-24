@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Layout, EyeOff, Save, RefreshCw, ChevronDown, ChevronUp, Wrench } from "lucide-react";
+import { Layout, EyeOff, Save, RefreshCw, ChevronDown, ChevronUp, Wrench, TrendingUp } from "lucide-react"; // Import TrendingUp
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,7 @@ export function PagesTab() {
   const [pageStatus, setPageStatus] = useState({
     catalog: true,
     drawings: true,
+    sales: true, // 1. Adicionado sales ao estado inicial
     orders: true,
     dashboard: true,
     drawing_elaboration: true,
@@ -27,7 +28,6 @@ export function PagesTab() {
     setLoading(true);
     try {
       const res = await adminService.getUserPreferences();
-      // Verificamos se os dados estão em res.data.data ou apenas res.data
       const savedData = res.data?.data || res.data;
       if (savedData?.pageVisibility) {
         setPageStatus(prev => ({ ...prev, ...savedData.pageVisibility }));
@@ -48,22 +48,16 @@ export function PagesTab() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // 1. Buscamos o estado atual completo (Cores, Temas, etc.)
       const res = await adminService.getUserPreferences();
       const currentFullData = res.data?.data || res.data || {};
 
-      // 2. Criamos o payload mantendo as configurações de estilo e atualizando visibilidade
       const finalPayload = {
         ...currentFullData,
         pageVisibility: pageStatus
       };
 
-      // 3. Enviamos para o endpoint correto via adminService
       await adminService.updateUserPreferences(finalPayload);
-      
       addToast("Configurações de módulos salvas com sucesso!", "success");
-      
-      // Recarregar para sincronizar Sidebar e Rotas
       setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
       console.error("Erro ao salvar:", error);
@@ -96,6 +90,20 @@ export function PagesTab() {
                 </div>
               </div>
               <Switch checked={pageStatus.catalog} onCheckedChange={() => handleToggle('catalog')} />
+            </div>
+
+            {/* Sales Dashboard - NOVO ITEM ADICIONADO AQUI */}
+            <div className="flex items-center justify-between p-4 border rounded-xl bg-background/50">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${pageStatus.sales ? 'bg-blue-500/10 text-blue-500' : 'bg-destructive/10 text-destructive'}`}>
+                  {pageStatus.sales ? <TrendingUp className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                </div>
+                <div>
+                  <p className="font-bold text-sm">Vendas & Performance</p>
+                  <p className="text-[10px] text-muted-foreground font-mono">/sales</p>
+                </div>
+              </div>
+              <Switch checked={pageStatus.sales} onCheckedChange={() => handleToggle('sales')} />
             </div>
 
             {/* Drawings with Sub-modules */}
