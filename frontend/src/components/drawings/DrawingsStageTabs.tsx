@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Database, Wrench } from "lucide-react";
 import { adminService } from "@/services/adminService";
@@ -54,9 +53,6 @@ export function DrawingStageTabs({ onAddNew }: DrawingStageTabsProps) {
         <Badge variant="outline" className="hidden md:flex gap-1 py-1 px-3 text-muted-foreground border-dashed bg-background">
           <Database className="h-3 w-3" /> Sincronizado com Protheus
         </Badge>
-        <Button onClick={onAddNew} className="gap-2 shadow-sm font-bold">
-          <Plus className="h-4 w-4" /> Novo Desenho
-        </Button>
       </div>
     </div>
   );
