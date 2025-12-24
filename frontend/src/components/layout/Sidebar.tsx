@@ -20,6 +20,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme, ColorTheme, ColorMode } from "@/contexts/ThemeContext";
 import { useToastContext } from "@/contexts/ToastContext";
 import { adminService } from "@/services/adminService";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const navItems = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", permission: null },
@@ -54,16 +65,17 @@ export default function Sidebar() {
   const { colorTheme, colorMode, setColorTheme, setColorMode } = useTheme();
   const { addToast } = useToastContext();
 
-  // Busca as preferências de visibilidade do servidor para sinalizar itens em manutenção
+  // Busca as preferências de visibilidade do servidor
   useEffect(() => {
     adminService.getUserPreferences()
       .then(res => {
-        if (res.data?.data?.pageVisibility) {
-          setPageVisibility(res.data.data.pageVisibility);
+        const data = res.data?.data || res.data;
+        if (data?.pageVisibility) {
+          setPageVisibility(data.pageVisibility);
         }
       })
       .catch(() => console.log("Erro ao carregar visibilidade no Sidebar"));
-  }, [location.pathname]); // Atualiza ao mudar de rota para garantir sincronia
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -106,7 +118,6 @@ export default function Sidebar() {
           const isActive = location.pathname === item.path;
           const isUnderMaintenance = pageVisibility[item.id] === false;
           
-          // Lógica de Permissões (quem não tem permissão nem vê o item)
           if (item.permission === "admin" && !user?.isSuperuser) return null;
           if (item.permission && item.permission !== "admin" && !hasPermission(item.permission)) return null;
 
@@ -135,7 +146,6 @@ export default function Sidebar() {
                 </div>
               )}
 
-              {/* Bolinha indicativa caso esteja colapsado */}
               {isCollapsed && isUnderMaintenance && (
                 <div className="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full border border-sidebar shadow-sm" />
               )}
@@ -222,13 +232,30 @@ export default function Sidebar() {
               </div>
             </div>
 
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-3 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              Sair
-            </button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  className="w-full flex items-center gap-2 px-3 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sair
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Deseja realmente sair?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Sua sessão será encerrada e você precisará fazer login novamente para acessar o sistema.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleLogout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Confirmar Saída
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
       </div>

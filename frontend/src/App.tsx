@@ -22,13 +22,12 @@ import Maintenance from "./pages/Maintenance";
 
 const queryClient = new QueryClient();
 
-// Guardião de Manutenção - Protege o acesso direto via URL
+// Guardião de Manutenção
 const MaintenanceGuard = ({ children, pageId }: { children: React.ReactNode, pageId: string }) => {
   const { user } = useAuth();
   const [visible, setVisible] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Timeout de segurança: Se a API não responder em 3s, libera a página para não travar o usuário
     const safetyTimer = setTimeout(() => {
       if (visible === null) setVisible(true);
     }, 3000);
@@ -37,15 +36,13 @@ const MaintenanceGuard = ({ children, pageId }: { children: React.ReactNode, pag
       try {
         const res = await adminService.getUserPreferences();
         const visibility = res.data?.data?.pageVisibility;
-        
-        // Se a página estiver marcada como false E o usuário não for Admin -> Bloqueia
         if (visibility && visibility[pageId] === false && !user?.isSuperuser) {
           setVisible(false);
         } else {
           setVisible(true);
         }
       } catch (error) {
-        setVisible(true); // Libera em caso de erro na API
+        setVisible(true);
       }
     };
 
@@ -54,7 +51,6 @@ const MaintenanceGuard = ({ children, pageId }: { children: React.ReactNode, pag
     } else {
       setVisible(true);
     }
-
     return () => clearTimeout(safetyTimer);
   }, [pageId, user]);
 
@@ -68,7 +64,6 @@ const MaintenanceGuard = ({ children, pageId }: { children: React.ReactNode, pag
   }
   
   if (visible === false) return <Navigate to="/maintenance" replace />;
-
   return <>{children}</>;
 };
 
@@ -94,18 +89,27 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 // Componente para proteger rotas exclusivas de Admin
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
-
   if (isLoading) return null;
-
   if (!user?.isSuperuser) {
     return <Navigate to="/dashboard" replace />;
   }
-
   return <>{children}</>;
 };
 
 const AppRoutes = () => {
   const { isAuthenticated, isLoading } = useAuth();
+
+  // Proteção contra fechamento acidental da aba
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isAuthenticated) {
+        e.preventDefault();
+        e.returnValue = ""; 
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isAuthenticated]);
 
   if (isLoading) {
     return (
@@ -117,30 +121,19 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      {/* Lógica da Rota Raiz: 
-          Se autenticado -> Dashboard
-          Se não autenticado -> Login 
-      */}
+      {/* Rota Raiz: Redirecionamento lógico baseado no estado de login */}
       <Route 
         path="/" 
         element={
-          isAuthenticated ? (
-            <Navigate to="/dashboard" replace />
-          ) : (
-            <Navigate to="/login" replace />
-          )
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
         } 
       />
 
-      {/* Rota Pública de Login - Redireciona para dashboard se já estiver logado */}
       <Route 
         path="/login" 
-        element={
-          !isAuthenticated ? <Login /> : <Navigate to="/dashboard" replace />
-        } 
+        element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" replace />} 
       />
       
-      {/* Rota de Manutenção */}
       <Route path="/maintenance" element={<Maintenance />} />
 
       {/* Rotas Protegidas dentro do Layout */}
@@ -190,7 +183,6 @@ const AppRoutes = () => {
         />
       </Route>
 
-      {/* 404 */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -204,6 +196,7 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
+            {/* O BrowserRouter fica aqui e ENVOLVE AppRoutes. AppRoutes NÃO deve ter outro Router dentro dele. */}
             <BrowserRouter>
               <AppRoutes />
             </BrowserRouter>
