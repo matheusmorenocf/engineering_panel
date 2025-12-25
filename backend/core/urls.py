@@ -50,6 +50,9 @@ urlpatterns = [
 
     # UserPrefs - Importante: O prefixo aqui define a URL base do service
     path("api/userprefs/", include("userprefs.urls")),
+
+    # Controle fisico
+    path('api/inventory/', include('inventory.urls')),
 ]
 
 if settings.DEBUG:
