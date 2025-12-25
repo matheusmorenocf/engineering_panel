@@ -27,22 +27,28 @@ class PhysicalControl(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name = "Controle Físico"
+        verbose_name_plural = "Controles Físicos"
+
     def save(self, *args, **kwargs):
-        is_new = self.pk is None
         if not self.tracking_code:
             now = timezone.now()
-            # Reinicia mensalmente: DURIT-0001-251225
+            # Contagem baseada no mês e ano atual para reiniciar o contador
             count = PhysicalControl.objects.filter(
                 created_at__month=now.month, 
                 created_at__year=now.year
             ).count() + 1
-            self.tracking_code = f"DURIT-{str(count).zfill(4)}-{now.strftime('%d%m%y')}"
+            
+            date_str = now.strftime('%d%m%y')
+            self.tracking_code = f"DURIT-{str(count).zfill(4)}-{date_str}"
         
-        if is_new:
+        if not self.pk: # Se for um novo registro
             self.movement_history = [{
                 "timestamp": timezone.now().isoformat(),
                 "location": self.location,
                 "responsible": self.responsible_person,
                 "action": "Entrada Inicial"
             }]
+            
         super().save(*args, **kwargs)

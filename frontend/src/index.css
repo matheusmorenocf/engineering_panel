@@ -125,6 +125,38 @@
     --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.4), 0 4px 6px -4px hsl(0 0% 0% / 0.3);
   }
 
+  /* --- CORREÇÃO DE VISIBILIDADE DOS SELECTS (CSS NATIVO) --- */
+  [data-radix-popper-content-wrapper] {
+    z-index: 9999 !important;
+  }
+
+  [role="listbox"], 
+  [data-radix-select-viewport],
+  .popover-content {
+    background-color: hsl(var(--popover)) !important;
+    color: hsl(var(--popover-foreground)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    box-shadow: var(--shadow-lg) !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    border-radius: var(--radius);
+  }
+
+  [role="option"] {
+    padding: 0.5rem 0.75rem;
+    cursor: default;
+    user-select: none;
+    border-radius: calc(var(--radius) - 2px);
+    transition: background-color 0.2s;
+  }
+
+  [role="option"][data-highlighted], 
+  [role="option"]:hover {
+    background-color: hsl(var(--accent)) !important;
+    color: hsl(var(--accent-foreground)) !important;
+    outline: none !important;
+  }
+
   /* Theme: Emerald */
   [data-theme="emerald"] {
     --primary: 160 84% 39%;
@@ -217,9 +249,15 @@
 
   /* Padrão: Sólido */
   :not([data-design="industrial"]) .menu-item-active {
-    background-color: hsl(var(--sidebar-primary)) !important;
-    color: hsl(var(--sidebar-primary-foreground)) !important;
+    background-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
     @apply shadow-md;
+  }
+
+  /* Garante que o ícone e o texto fiquem brancos/claros no modo padrão ativo */
+  :not([data-design="industrial"]) .menu-item-active svg,
+  :not([data-design="industrial"]) .menu-item-active span {
+    color: hsl(var(--primary-foreground)) !important;
   }
 
   .glass-panel {
@@ -241,28 +279,6 @@
   }
 
   /* Industrial Design Components */
-/* --- ESTILO PADRÃO (Sólido e Visível) --- */
-:not([data-design="industrial"]) .menu-item-active {
-  background-color: hsl(var(--primary)) !important;
-  color: hsl(var(--primary-foreground)) !important;
-  @apply shadow-md;
-}
-
-/* Garante que o ícone e o texto fiquem brancos/claros no modo padrão ativo */
-:not([data-design="industrial"]) .menu-item-active svg,
-:not([data-design="industrial"]) .menu-item-active span {
-  color: hsl(var(--primary-foreground)) !important;
-}
-
-/* --- ESTILO INDUSTRIAL (Transparência/Glass) --- */
-[data-design="industrial"] .menu-item-active {
-  background-color: hsla(var(--primary), 0.15) !important;
-  color: hsl(var(--primary)) !important;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  @apply border border-primary/20 shadow-sm;
-}
-
   [data-design="industrial"] .card-kpi {
     @apply rounded-[2.5rem] p-8 transition-all duration-500;
     background: linear-gradient(145deg, hsla(var(--card), 0.6), hsla(var(--card), 0.4));
@@ -270,6 +286,14 @@
 
   [data-design="industrial"] .text-kpi {
     @apply font-black tracking-tighter leading-none;
+  }
+
+  /* Ajuste específico para o design Industrial não afetar a leitura dos Selects */
+  [data-design="industrial"] [role="listbox"],
+  [data-design="industrial"] [data-radix-select-viewport] {
+    background-color: hsl(var(--card)) !important;
+    border-color: hsla(var(--primary), 0.2) !important;
+    backdrop-filter: blur(16px) !important;
   }
 }
 
