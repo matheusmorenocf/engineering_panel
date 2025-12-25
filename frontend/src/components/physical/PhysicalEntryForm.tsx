@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, MapPin, Package, Camera, Info, Building2 } from "lucide-react";
+import { Plus, Trash2, Camera, Info, Package, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { inventoryService } from "@/services/inventoryService";
 import { useToastContext } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/libs/api";
@@ -23,185 +21,122 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
   const [purpose, setPurpose] = useState("");
   const [generalNotes, setGeneralNotes] = useState("");
   const [items, setItems] = useState<any[]>([
-    { id: crypto.randomUUID(), partName: "", quantity: 1, location: "" }
+    { id: crypto.randomUUID(), partName: "", quantity: 1, location: "", files: {} }
   ]);
 
-  // Carregamento de localizações com tratamento de erro e formato de dados
   useEffect(() => {
-    const fetchLocations = async () => {
-      try {
-        const res = await api.get("inventory/locations/");
-        // Trata resposta direta ou paginada (comum no Django Rest Framework)
-        const data = Array.isArray(res.data) ? res.data : (res.data?.results || []);
-        console.log("Localizações carregadas no EntryForm:", data);
-        setLocations(data);
-      } catch (error) {
-        console.error("Erro ao buscar localizações no EntryForm:", error);
-        addToast("Não foi possível carregar as localizações.", "error");
-      }
-    };
-
-    fetchLocations();
+    api.get("inventory/locations/").then(res => {
+      setLocations(Array.isArray(res.data) ? res.data : (res.data?.results || []));
+    });
   }, []);
+
+  const handleFileChange = (itemId: string, label: string, file: File | null) => {
+    setItems(prev => prev.map(item => 
+      item.id === itemId ? { ...item, files: { ...item.files, [label]: file } } : item
+    ));
+  };
 
   const handleFinalSubmit = async () => {
     if (items.some(i => !i.partName || !i.location)) {
-      addToast("Preencha o nome da peça e a localização de todos os itens.", "error");
+      addToast("Preencha todos os campos obrigatórios.", "error");
       return;
     }
     setLoading(true);
-    
-    // Fallback para nomes de usuários (firstName/lastName ou first_name/last_name)
-    const currentResponsible = user 
-      ? `${user.firstName || user.first_name || ""} ${user.lastName || user.last_name || ""}`.trim() 
-      : "Sistema";
-
-    const payload = items.map(item => ({
-      product: item.partName,
-      quantity: parseInt(item.quantity.toString()),
-      location: item.location,
-      responsible_person: currentResponsible,
-      sender: sender,
-      client_name: clientName,
-      nf_number: nfNumber,
-      action_type: purpose,
-      notes: generalNotes
-    }));
 
     try {
-      await inventoryService.create(payload);
-      addToast(`${items.length} item(ns) registrados com sucesso!`, "success");
+      const currentResponsible = user ? `${user.firstName || user.first_name || ""} ${user.lastName || user.last_name || ""}`.trim() : "Sistema";
+
+      for (const item of items) {
+        const formData = new FormData();
+        formData.append('product', item.partName);
+        formData.append('quantity', item.quantity.toString());
+        formData.append('location', item.location);
+        formData.append('responsible_person', currentResponsible);
+        formData.append('sender', sender);
+        formData.append('client_name', clientName);
+        formData.append('nf_number', nfNumber);
+        formData.append('action_type', purpose);
+        formData.append('notes', generalNotes);
+        
+        if (user?.id) formData.append('created_by', user.id.toString());
+
+        // IMPORTANTE: Enviar cada arquivo e tipo separadamente para o Django ler como lista
+        Object.entries(item.files).forEach(([label, file]) => {
+          if (file instanceof File) {
+            formData.append('uploaded_attachments', file);
+            formData.append('attachment_types', label);
+          }
+        });
+
+        await api.post("inventory/physical-control/", formData);
+      }
+
+      addToast(`${items.length} item(ns) registados!`, "success");
       onSuccess();
     } catch (error) {
-      console.error("Erro ao salvar entrada:", error);
-      addToast("Erro ao processar entrada no servidor.", "error");
+      console.error("Erro no upload:", error);
+      addToast("Erro 400: Verifique os ficheiros ou dados enviados.", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const updateItem = (id: string, field: string, value: any) => {
-    setItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
-  };
-
-  const addItem = () => {
-    setItems(prev => [...prev, { id: crypto.randomUUID(), partName: "", quantity: 1, location: "" }]);
-  };
-
-  const removeItem = (id: string) => {
-    if (items.length > 1) {
-      setItems(prev => prev.filter(item => item.id !== id));
-    }
-  };
-
   return (
     <div className="space-y-6 pt-2">
-      <Card className="bg-primary/5 border-primary/20 shadow-none overflow-hidden">
+      <Card className="bg-primary/5 border-primary/20 shadow-none">
         <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-primary tracking-widest">Remetente / Origem</label>
-            <Input className="bg-background h-10 font-bold border-primary/10" value={sender} onChange={(e) => setSender(e.target.value)} placeholder="Quem enviou?" />
+            <label className="text-[10px] font-black uppercase text-primary">Remetente</label>
+            <Input className="bg-background h-10 font-bold" value={sender} onChange={(e) => setSender(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-primary tracking-widest">Responsável pela Entrada</label>
-            <Input disabled className="bg-muted h-10 font-black border-dashed" value={user ? `${user.firstName || user.first_name || ""} ${user.lastName || user.last_name || ""}` : "Carregando..."} />
+            <label className="text-[10px] font-black uppercase text-primary">Responsável</label>
+            <Input disabled className="bg-muted h-10 font-black" value={user ? `${user.firstName || user.first_name || ""} ${user.lastName || user.last_name || ""}` : "..."} />
           </div>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase text-muted-foreground">Número da NF</label>
-          <Input placeholder="000.000" className="h-11 font-bold" value={nfNumber} onChange={(e) => setNfNumber(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase text-muted-foreground">Finalidade do Envio</label>
-          <Input placeholder="Ex: Orçamentação" className="h-11 font-bold" value={purpose} onChange={(e) => setPurpose(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase text-muted-foreground">Cliente / Dono</label>
-          <Input placeholder="Opcional" className="h-11 font-bold" value={clientName} onChange={(e) => setClientName(e.target.value)} />
-        </div>
+        <Input placeholder="NF" className="font-bold" value={nfNumber} onChange={(e) => setNfNumber(e.target.value)} />
+        <Input placeholder="Finalidade" className="font-bold" value={purpose} onChange={(e) => setPurpose(e.target.value)} />
+        <Input placeholder="Cliente" className="font-bold" value={clientName} onChange={(e) => setClientName(e.target.value)} />
       </div>
 
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <label className="text-xs font-black uppercase text-foreground flex items-center gap-2">
-            <Package className="h-4 w-4 text-primary" /> Itens Recebidos
-          </label>
-          <Badge variant="secondary" className="font-black">{items.length} ITENS NA NF</Badge>
-        </div>
-        
         {items.map((item, index) => (
-          <div key={item.id} className="p-6 border border-border rounded-2xl bg-muted/30 space-y-5 relative group">
-             <div className="absolute -top-3 left-6 px-3 py-1 bg-background border border-border rounded-full text-[10px] font-black text-primary uppercase shadow-sm">
-               Item #{index + 1}
-             </div>
-             
-             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
-                <div className="md:col-span-2 space-y-1">
-                  <Input placeholder="Nome da Peça" className="bg-background h-10 font-bold" value={item.partName} onChange={(e) => updateItem(item.id, "partName", e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Input type="number" placeholder="Qtd" className="bg-background h-10 font-black" value={item.quantity} onChange={(e) => updateItem(item.id, "quantity", e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  {/* Forçamos a re-renderização baseada no tamanho da lista de localizações */}
-                  <Select 
-                    key={`select-loc-${locations.length}-${index}`}
-                    value={item.location} 
-                    onValueChange={(val) => updateItem(item.id, "location", val)}
-                  >
-                    <SelectTrigger className="bg-background h-10 font-bold border-primary/20">
-                      <SelectValue placeholder={locations.length > 0 ? "Localização" : "Carregando..."} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations.length > 0 ? (
-                        locations.map((loc: any) => (
-                          <SelectItem key={loc.id} value={loc.name}>
-                            {loc.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled>Nenhuma localização cadastrada</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-             </div>
+          <div key={item.id} className="p-6 border rounded-2xl bg-muted/30 space-y-5 relative">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Input className="md:col-span-2 bg-background font-bold" placeholder="Peça" value={item.partName} onChange={(e) => updateItem(item.id, "partName", e.target.value)} />
+              <Input type="number" className="bg-background font-black" placeholder="Qtd" value={item.quantity} onChange={(e) => updateItem(item.id, "quantity", e.target.value)} />
+              <Select value={item.location} onValueChange={(val) => updateItem(item.id, "location", val)}>
+                <SelectTrigger className="bg-background font-bold"><SelectValue placeholder="Local" /></SelectTrigger>
+                <SelectContent>{locations.map(loc => <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
 
-             <div className="grid grid-cols-4 gap-2">
-                {["Frontal", "Lateral", "Superior", "NF"].map(label => (
-                  <div key={label} className="aspect-video bg-background border border-dashed border-border rounded-lg flex flex-col items-center justify-center opacity-50 group-hover:opacity-100 transition-opacity">
-                    <Camera className="h-4 w-4 text-muted-foreground mb-1" />
-                    <span className="text-[8px] font-black uppercase text-muted-foreground">{label}</span>
-                  </div>
-                ))}
-             </div>
-
-             {items.length > 1 && (
-                <Button variant="ghost" size="sm" className="text-destructive h-8 px-3 font-black uppercase text-[10px] hover:bg-destructive/10" onClick={() => removeItem(item.id)}>
-                  <Trash2 className="h-3 w-3 mr-2" /> Remover Item
-                </Button>
-             )}
+            <div className="grid grid-cols-4 gap-2">
+              {["FRONTAL", "LATERAL", "SUPERIOR", "NF"].map(label => (
+                <label key={label} className={`relative aspect-video border border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${item.files[label] ? 'bg-primary/10 border-primary' : 'bg-background hover:bg-primary/5'}`}>
+                  <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => handleFileChange(item.id, label, e.target.files?.[0] || null)} />
+                  {item.files[label] ? <CheckCircle2 className="h-5 w-5 text-primary" /> : <Camera className="h-4 w-4 text-muted-foreground" />}
+                  <span className="text-[8px] font-black uppercase mt-1">{label}</span>
+                </label>
+              ))}
+            </div>
           </div>
         ))}
-
-        <Button variant="outline" className="w-full border-dashed border-2 h-12 font-black uppercase text-xs hover:bg-primary/5 transition-colors" onClick={addItem}>
-          <Plus className="h-4 w-4 mr-2" /> Adicionar Outra Peça à Nota
-        </Button>
+        <Button variant="outline" className="w-full border-dashed border-2 font-black" onClick={() => setItems([...items, { id: crypto.randomUUID(), partName: "", quantity: 1, location: "", files: {} }])}><Plus className="h-4 w-4 mr-2"/>Adicionar Item</Button>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-xs font-black uppercase text-muted-foreground flex items-center gap-2">
-          <Info className="h-4 w-4 text-primary" /> Observações de Recebimento
-        </label>
-        <Textarea className="bg-background min-h-[100px] font-medium" placeholder="Descreva o estado das peças..." value={generalNotes} onChange={(e) => setGeneralNotes(e.target.value)} />
-      </div>
+      <Textarea className="bg-background font-medium" placeholder="Notas gerais..." value={generalNotes} onChange={(e) => setGeneralNotes(e.target.value)} />
 
-      <Button className="w-full gradient-brand h-14 font-black uppercase text-sm shadow-glow tracking-widest" onClick={handleFinalSubmit} disabled={loading}>
-        {loading ? "Processando Registro..." : "Confirmar Recebimento e Gerar Rastreio"}
+      <Button className="w-full gradient-brand h-14 font-black uppercase" onClick={handleFinalSubmit} disabled={loading}>
+        {loading ? "Processando..." : "Confirmar Entrada"}
       </Button>
     </div>
   );
+
+  function updateItem(id: string, field: string, value: any) {
+    setItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  }
 }
