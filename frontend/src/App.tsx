@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,7 +21,8 @@ import Dashboard from "./pages/Dashboard";
 import SalesDashboard from "./pages/SalesDashboard";
 import Settings from "./pages/Settings";
 import Maintenance from "./pages/Maintenance";
-import PhysicalControl from "./pages/PhysicalControl"; // Import novo
+import PhysicalControl from "./pages/PhysicalControl";
+import { ProcessingQueuePage } from "./pages/ProcessingQueuePage"; // Import novo
 
 const queryClient = new QueryClient();
 
@@ -35,16 +37,13 @@ const MaintenanceGuard = ({ children, pageId }: { children: React.ReactNode, pag
 
     const checkStatus = async () => {
       try {
-        // Se o usuário já é Admin, nem precisamos validar visibilidade, liberamos direto
         if (user?.isSuperuser) {
           setVisible(true);
           return;
         }
-
         const res = await adminService.getUserPreferences();
         const visibility = res.data?.data?.pageVisibility;
         
-        // Se a visibilidade for falsa e NÃO for superuser (redundância de segurança)
         if (visibility && visibility[pageId] === false && !user?.isSuperuser) {
           setVisible(false);
         } else {
@@ -55,11 +54,9 @@ const MaintenanceGuard = ({ children, pageId }: { children: React.ReactNode, pag
       }
     };
 
-    if (user) {
-      checkStatus();
-    } else {
-      setVisible(true);
-    }
+    if (user) checkStatus();
+    else setVisible(true);
+    
     return () => clearTimeout(safetyTimer);
   }, [pageId, user]);
 
@@ -71,35 +68,21 @@ const MaintenanceGuard = ({ children, pageId }: { children: React.ReactNode, pag
       </div>
     );
   }
-  
   if (visible === false) return <Navigate to="/maintenance" replace />;
   return <>{children}</>;
 };
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (isLoading) return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
-  if (!user?.isSuperuser) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  if (!user?.isSuperuser) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 };
 
@@ -117,29 +100,16 @@ const AppRoutes = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isAuthenticated]);
 
-  if (isLoading) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  if (isLoading) return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
     <Routes>
-      <Route 
-        path="/" 
-        element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
-        } 
-      />
-
-      <Route 
-        path="/login" 
-        element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" replace />} 
-      />
-      
+      <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
+      <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" replace />} />
       <Route path="/maintenance" element={<Maintenance />} />
+
+      {/* ROTA PÚBLICA DE TRIAGEM (Acessível via Link com ID) */}
+      <Route path="/triagem/:id" element={<ProcessingQueuePage />} />
 
       <Route
         element={
@@ -149,60 +119,15 @@ const AppRoutes = () => {
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />
-
-        <Route 
-          path="/sales" 
-          element={
-            <MaintenanceGuard pageId="sales">
-              <SalesDashboard />
-            </MaintenanceGuard>
-          } 
-        />
+        <Route path="/sales" element={<MaintenanceGuard pageId="sales"><SalesDashboard /></MaintenanceGuard>} />
+        <Route path="/catalog" element={<MaintenanceGuard pageId="catalog"><Catalog /></MaintenanceGuard>} />
+        <Route path="/drawings" element={<MaintenanceGuard pageId="drawings"><Drawings /></MaintenanceGuard>} />
+        <Route path="/physical-control" element={<MaintenanceGuard pageId="physical"><PhysicalControl /></MaintenanceGuard>} />
         
-        <Route 
-          path="/catalog" 
-          element={
-            <MaintenanceGuard pageId="catalog">
-              <Catalog />
-            </MaintenanceGuard>
-          } 
-        />
-        
-        <Route 
-          path="/drawings" 
-          element={
-            <MaintenanceGuard pageId="drawings">
-              <Drawings />
-            </MaintenanceGuard>
-          } 
-        />
+        {/* Fila Geral de Triagem Protegida */}
+        <Route path="/triagem" element={<ProcessingQueuePage />} />
 
-        <Route 
-          path="/orders" 
-          element={
-            <MaintenanceGuard pageId="orders">
-              <div className="p-8">Módulo de Ordens de Produção</div>
-            </MaintenanceGuard>
-          } 
-        />
-
-        <Route 
-          path="/physical-control" 
-          element={
-            <MaintenanceGuard pageId="physical">
-              <PhysicalControl />
-            </MaintenanceGuard>
-          } 
-        />
-        
-        <Route 
-          path="/settings" 
-          element={
-            <AdminRoute>
-              <Settings />
-            </AdminRoute>
-          } 
-        />
+        <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

@@ -19,10 +19,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   FileText,
   MapPin,
+  MapPinned,
   Trash2,
   History,
   ImageIcon,
@@ -32,7 +34,10 @@ import {
   Save,
   X,
   Maximize2,
-  Loader2
+  Loader2,
+  Link as LinkIcon,
+  Copy,
+  ExternalLink
 } from "lucide-react";
 import { inventoryService } from "@/services/inventoryService";
 import { useToastContext } from "@/contexts/ToastContext";
@@ -45,7 +50,7 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [locations, setLocations] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]); // Adicionado estado para usuários
+  const [users, setUsers] = useState<any[]>([]); 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
@@ -54,7 +59,8 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
   const [localItem, setLocalItem] = useState<any>(item);
   const [editData, setEditData] = useState({
     location: "",
-    current_responsible: "", // Adicionado responsável ao editData
+    physical_location: "",
+    current_responsible: "",
     notes: "",
   });
 
@@ -63,17 +69,16 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
       setLocalItem(item);
       setEditData({
         location: String(item.location || ""),
-        current_responsible: String(item.current_responsible || ""), // Sincroniza responsável
+        physical_location: item.physical_location || "",
+        current_responsible: String(item.current_responsible || ""), 
         notes: item.item_notes || "",
       });
       setIsEditing(false);
 
-      // Carrega localizações
       api.get("physical-control/locations/").then(res => {
         setLocations(Array.isArray(res.data) ? res.data : res.data?.results || []);
       });
 
-      // Carrega usuários para o select de responsável
       api.get("physical-control/users/").then(res => {
         setUsers(res.data || []);
       });
@@ -100,7 +105,8 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
     try {
       const response = await inventoryService.updateItem(localItem.id, {
         location: editData.location,
-        current_responsible: editData.current_responsible, // Envia novo responsável
+        physical_location: editData.physical_location,
+        current_responsible: editData.current_responsible, 
         item_notes: editData.notes,
       });
       
@@ -114,6 +120,19 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
     } finally {
       setLoading(false);
     }
+  };
+
+  // --- CORREÇÃO: Pega o ID da triagem técnica (ItemProcessing) ---
+  const processingId = localItem?.processing?.id || localItem?.processing;
+  const triagemUrl = `${window.location.origin}/triagem/${processingId}`;
+
+  const copyTriagemLink = () => {
+    if (!processingId) {
+        addToast("ID de triagem não localizado.", "error");
+        return;
+    }
+    navigator.clipboard.writeText(triagemUrl);
+    addToast("Link de triagem copiado!", "success");
   };
 
   if (!localItem) return null;
@@ -181,7 +200,7 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
 
               <div className="p-5 rounded-2xl bg-primary/5 border border-primary/10 space-y-4">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Endereçamento</p>
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Depósito / Área</p>
                   {isEditing ? (
                     <Select value={editData.location} onValueChange={(val) => setEditData({ ...editData, location: val })}>
                       <SelectTrigger className="bg-background mt-2"><SelectValue placeholder="Selecione o local" /></SelectTrigger>
@@ -193,6 +212,21 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
                     <p className="font-black text-primary text-lg flex items-center gap-2 uppercase leading-none mt-1"><MapPin className="h-5 w-5" /> {localItem.location_name}</p>
                   )}
                 </div>
+
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Localização Física (Específica)</p>
+                  {isEditing ? (
+                    <Input 
+                      className="bg-background mt-2"
+                      placeholder="Ex: Armário 1-B" 
+                      value={editData.physical_location} 
+                      onChange={(e) => setEditData({ ...editData, physical_location: e.target.value })} 
+                    />
+                  ) : (
+                    <p className="font-bold text-foreground flex items-center gap-2 text-sm uppercase"><MapPinned className="h-4 w-4 opacity-40" /> {localItem.physical_location || "NÃO INFORMADA"}</p>
+                  )}
+                </div>
+
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Responsável Atual</p>
                   {isEditing ? (
@@ -239,6 +273,29 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
                 )}
               </div>
 
+              {/* Seção do Link de Triagem corrigida */}
+              <div className="space-y-3 p-5 rounded-2xl border border-dashed bg-muted/10">
+                <h4 className="text-[10px] font-black uppercase flex items-center gap-2 tracking-[0.2em] text-foreground">
+                  <LinkIcon className="h-4 w-4 text-primary" /> Link de Triagem Técnica
+                </h4>
+                <div className="flex gap-2">
+                  <Input 
+                    readOnly 
+                    value={triagemUrl} 
+                    className="h-10 text-[11px] font-mono bg-background"
+                  />
+                  <Button size="icon" variant="outline" className="h-10 w-10 shrink-0" onClick={copyTriagemLink}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button size="icon" variant="secondary" className="h-10 w-10 shrink-0" asChild>
+                    <a href={`/triagem/${processingId}`} target="_blank" rel="noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+                <p className="text-[9px] font-bold text-muted-foreground uppercase">Compartilhe este link com o técnico para preenchimento do formulário.</p>
+              </div>
+
               {!isEditing && (
                 <div className="space-y-4">
                   <h4 className="text-[10px] font-black uppercase flex items-center gap-2 text-muted-foreground tracking-[0.2em]"><History className="h-4 w-4" /> Timeline de Movimentações</h4>
@@ -263,7 +320,7 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
         </DialogContent>
       </Dialog>
 
-      {/* 1. Preview de Imagem (Lightbox) */}
+      {/* Preview de Imagem (Lightbox) */}
       <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-transparent border-none flex items-center justify-center z-[110] outline-none">
           <DialogTitle className="sr-only">Visualização de Imagem</DialogTitle>
@@ -281,7 +338,6 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
         </DialogContent>
       </Dialog>
 
-      {/* 2. Confirmação Exclusão */}
       <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
         <AlertDialogContent className="z-[120]">
           <AlertDialogHeader>
@@ -299,7 +355,6 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 3. Confirmação Alteração */}
       <AlertDialog open={showSaveAlert} onOpenChange={setShowSaveAlert}>
         <AlertDialogContent className="z-[120]">
           <AlertDialogHeader>

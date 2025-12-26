@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, Camera, Upload, FileText, X } from "lucide-react";
+import { Plus, Trash2, Camera, Upload, FileText, X, MapPinned } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,7 +45,6 @@ function FileDropZone({ file, onChange, label, className, accept = "image/*,.pdf
               <span className="text-[7px] truncate max-w-[60px] mt-1 uppercase font-bold">{file.name}</span>
             </div>
           )}
-          {/* Botão para remover arquivo */}
           <button 
             type="button" 
             onClick={(e) => { e.stopPropagation(); onChange(null); }} 
@@ -78,7 +77,7 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
   });
 
   const [items, setItems] = useState<any[]>([{
-    id: '1', product: '', quantity: 1, location: '', notes: '',
+    id: '1', product: '', quantity: 1, location: '', physical_location: '', notes: '',
     photo_top: null, photo_front: null, photo_side: null, photo_iso: null
   }]);
 
@@ -97,8 +96,6 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validação flexível: Se não houver número de NF, avisa mas permite (ou define default)
     const finalNfNumber = header.nf_number.trim() || "S/NF";
     
     setLoading(true);
@@ -119,7 +116,6 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="relative space-y-6 pb-20">
-      {/* Cabeçalho da NF */}
       <div className="bg-muted/40 p-5 rounded-2xl border border-dashed space-y-4">
         <h3 className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
           <FileText className="w-3 h-3" /> Dados do Recebimento (NF Opcional)
@@ -144,7 +140,6 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
         </div>
       </div>
 
-      {/* Lista de Itens */}
       <div className="space-y-4">
         {items.map((item, index) => (
           <div key={item.id} className="border rounded-2xl p-5 bg-card shadow-sm space-y-4 animate-in fade-in slide-in-from-bottom-2">
@@ -157,15 +152,19 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold opacity-70">Produto (Código/ID)</Label><Input value={item.product} onChange={e => updateItem(index, 'product', e.target.value)} required /></div>
               <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold opacity-70">Qtd</Label><Input type="number" min="1" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} required /></div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase font-bold opacity-70">Localização</Label>
+                <Label className="text-[10px] uppercase font-bold opacity-70">Depósito/Local</Label>
                 <Select value={item.location} onValueChange={v => updateItem(index, 'location', v)} required>
                   <SelectTrigger className="h-10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent className="z-[9999]">{locations.map(l => <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>)}</SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase font-bold opacity-70">Localização Física</Label>
+                <Input placeholder="Ex: Armário 1-B" value={item.physical_location} onChange={e => updateItem(index, 'physical_location', e.target.value)} />
               </div>
             </div>
 
@@ -175,7 +174,6 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
               <Label className="text-[9px] font-black uppercase flex items-center gap-2 text-primary tracking-tighter">
                 <Camera className="h-3 w-3" /> Fotos do Produto (4 Vistas Obrigatórias)
               </Label>
-              {/* Grid das fotos corrigido para não explodir */}
               <div className="grid grid-cols-4 gap-2">
                 {['Superior', 'Frontal', 'Lateral', 'Iso'].map((label, idx) => {
                   const keys = ['photo_top', 'photo_front', 'photo_side', 'photo_iso'];
@@ -196,12 +194,11 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
         ))}
       </div>
 
-      {/* Rodapé Fixo (Sticky) com estilo melhorado */}
       <div className="fixed md:absolute bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-md border-t flex justify-between gap-4 z-30">
         <Button 
           type="button" 
           variant="outline" 
-          onClick={() => setItems([...items, { id: Math.random().toString(), product: '', quantity: 1, location: '', notes: '', photo_top: null, photo_front: null, photo_side: null, photo_iso: null }])} 
+          onClick={() => setItems([...items, { id: Math.random().toString(), product: '', quantity: 1, location: '', physical_location: '', notes: '', photo_top: null, photo_front: null, photo_side: null, photo_iso: null }])} 
           className="font-black border-primary/20 text-primary uppercase text-[10px] h-11 tracking-widest bg-background"
         >
           <Plus className="w-4 h-4 mr-2" /> Item na mesma NF

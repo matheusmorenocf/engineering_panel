@@ -1,4 +1,4 @@
-// frontend/src/libs/api.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 
 const baseURL = "http://localhost:8000/api";
@@ -33,6 +33,7 @@ const processQueue = (error: any, token: string | null = null) => {
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem(STORAGE_KEY_TOKEN);
+    // Só anexa se o token existir. Se for nulo, a requisição segue limpa (importante para triagem pública)
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -41,17 +42,29 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 2. Interceptor de Resposta: A "mágica" do Refresh acontece aqui
+// 2. Interceptor de Resposta: Refresh Token + Tratamento de Rotas Públicas
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Se o erro for 401 e não for uma tentativa de login ou um retry
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes("/token/")) {
+    // Se o erro for 401
+    if (error.response?.status === 401) {
+      const refreshToken = localStorage.getItem(STORAGE_KEY_REFRESH);
       
+      // AJUSTE PARA ACESSO PÚBLICO: 
+      // Se não houver Refresh Token e o erro for 401, significa que o usuário é um técnico sem login.
+      // Retornamos o erro direto para que a página de triagem use a permissão "AllowAny" do backend.
+      if (!refreshToken) {
+        return Promise.reject(error);
+      }
+
+      // Se for uma tentativa de login que falhou, não fazemos refresh
+      if (originalRequest.url.includes("/token/")) {
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
-        // Se já houver um refresh em curso, coloca a requisição na fila
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -65,40 +78,38 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem(STORAGE_KEY_REFRESH);
+      try {
+        // Tenta obter um novo Access Token
+        const response = await axios.post(`${baseURL}/token/refresh/`, {
+          refresh: refreshToken,
+        });
 
-      if (refreshToken) {
-        try {
-          // Tenta obter um novo Access Token
-          const response = await axios.post(`${baseURL}/token/refresh/`, {
-            refresh: refreshToken,
-          });
+        const { access } = response.data;
 
-          const { access } = response.data;
+        localStorage.setItem(STORAGE_KEY_TOKEN, access);
+        api.defaults.headers.common["Authorization"] = `Bearer ${access}`;
+        originalRequest.headers.Authorization = `Bearer ${access}`;
 
-          // Atualiza o storage e o cabeçalho da requisição atual
-          localStorage.setItem(STORAGE_KEY_TOKEN, access);
-          api.defaults.headers.common["Authorization"] = `Bearer ${access}`;
-          originalRequest.headers.Authorization = `Bearer ${access}`;
+        processQueue(null, access);
+        isRefreshing = false;
 
-          processQueue(null, access);
-          isRefreshing = false;
+        return api(originalRequest); 
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        isRefreshing = false;
 
-          return api(originalRequest); // Refaz a requisição original que falhou
-        } catch (refreshError) {
-          processQueue(refreshError, null);
-          isRefreshing = false;
-
-          // Se o Refresh Token também expirou, aí sim deslogamos
-          console.warn("Refresh token expirado. Redirecionando para login.");
-          localStorage.removeItem(STORAGE_KEY_TOKEN);
-          localStorage.removeItem(STORAGE_KEY_REFRESH);
-          localStorage.removeItem(STORAGE_KEY_USER);
-          
-          if (!window.location.pathname.includes("/login")) {
-            window.location.href = "/login";
-          }
+        // Se o Refresh Token falhou (expirou), deslogamos
+        console.warn("Sessão expirada. Redirecionando para login.");
+        localStorage.removeItem(STORAGE_KEY_TOKEN);
+        localStorage.removeItem(STORAGE_KEY_REFRESH);
+        localStorage.removeItem(STORAGE_KEY_USER);
+        
+        // Só redireciona se não for a página de triagem (que pode ser pública)
+        if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/triagem")) {
+          window.location.href = "/login";
         }
+        
+        return Promise.reject(refreshError);
       }
     }
 
