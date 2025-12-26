@@ -35,8 +35,16 @@ const MaintenanceGuard = ({ children, pageId }: { children: React.ReactNode, pag
 
     const checkStatus = async () => {
       try {
+        // Se o usuário já é Admin, nem precisamos validar visibilidade, liberamos direto
+        if (user?.isSuperuser) {
+          setVisible(true);
+          return;
+        }
+
         const res = await adminService.getUserPreferences();
         const visibility = res.data?.data?.pageVisibility;
+        
+        // Se a visibilidade for falsa e NÃO for superuser (redundância de segurança)
         if (visibility && visibility[pageId] === false && !user?.isSuperuser) {
           setVisible(false);
         } else {

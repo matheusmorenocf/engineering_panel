@@ -1,14 +1,22 @@
+"""
+URL configuration for core project.
+"""
 from django.contrib import admin
 from django.urls import path, re_path, include
 from django.conf import settings
 from django.conf.urls.static import static
+
+# Imports de Autenticação e DRF
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
+
+# Import do Model de Preferências
 from userprefs.models import UserPreferences
 
+# --- View de Perfil ---
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -35,25 +43,27 @@ def get_user_profile(request):
         'preferences': prefs_obj.data or {}
     })
 
+# --- Rotas Principais ---
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # Autenticação
+    # Autenticação (Login e Refresh)
     re_path(r'^api/token/?$', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     re_path(r'^api/token/refresh/?$', TokenRefreshView.as_view(), name='token_refresh'),
     
-    # Perfil
+    # Perfil do Usuário
     re_path(r'^api/user/me/?$', get_user_profile, name='user_profile'),
 
-    # Catálogo
-    path('api/catalog/', include('catalog.urls')),
-
-    # UserPrefs - Importante: O prefixo aqui define a URL base do service
+    # UserPrefs
     path("api/userprefs/", include("userprefs.urls")),
 
-    # Controle fisico
-    path('api/inventory/', include('inventory.urls')),
+    # Controle Físico (App de Engenharia)
+    path('api/physical-control/', include('physical_control.urls')),
 ]
 
+# --- Configuração para servir arquivos de MEDIA ---
+# Isso permite que URLs como http://localhost:8000/media/physical_control/... 
+# abram as imagens e PDFs diretamente no navegador do frontend.
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

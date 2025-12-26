@@ -23,9 +23,10 @@ services:
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./backend:/app
-      - backend_media:/app/media
       - backend_static:/app/static
-      - /d/produtos:/app/media
+      # Removido backend_media nomeado para usar apenas o bind mount do seu disco local
+      # Isso garante que você veja a pasta 'physical_control' direto no seu D:/produtos
+      - d:\industry_suit:/app/media
     ports:
       - "8000:8000"
     environment:
@@ -37,7 +38,6 @@ services:
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       DATABASE_HOST: db
       DATABASE_PORT: "5432"
-      # ATENÇÃO: Atualizei a porta permitida para o novo padrão do Vite (5173)
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://frontend:5173}
     depends_on:
       - db
@@ -49,16 +49,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: unless-stopped
-    # O comando do Vite agora usa --host para permitir conexões externas ao container
     command: npm run dev -- --host
     volumes:
       - ./frontend:/app
       - /app/node_modules
-      # Removi o volume do .next que não existe mais no Vite
     ports:
-      - "5173:5173" # Porta padrão do Vite
+      - "5173:5173"
     environment:
-      # No Vite, variáveis de ambiente precisam começar com VITE_
       VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     depends_on:
       - backend
@@ -67,8 +64,8 @@ services:
 
 volumes:
   postgres_data:
-  backend_media:
   backend_static:
+  # Removido backend_media daqui pois estamos usando um caminho absoluto (/d/produtos)
 
 networks:
   painel_network:

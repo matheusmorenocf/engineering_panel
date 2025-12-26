@@ -31,4 +31,5 @@ django-filter
 whitenoise>=6.0.0
 gunicorn>=21.2
 SQLAlchemy>=2.0
-
+pillow
+django-cors-headers

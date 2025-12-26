@@ -1,63 +1,71 @@
-import api from "@/libs/api";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import api from "../libs/api";
 
-export interface PhysicalControlEntry {
-  id?: number;
-  product: string | number; 
-  product_name?: string;
-  quantity: number;
-  location: string | number; // No backend é uma FK para Location
-  location_name?: string;
-  action_type: 'IN' | 'OUT';
-  notes?: string;
-  attachments?: FileList | any[]; // Suporte para anexos
-  created_at?: string;
-  updated_at?: string;
-}
-
-/**
- * Service para gestão do Controle Físico (Inventário)
- */
 export const inventoryService = {
-  // Busca todos os registros
-  getAll: () => api.get<any>("inventory/physical-control/"),
+  // ==========================================
+  // LOCAIS (LOCATIONS)
+  // ==========================================
   
-  // Busca um registro específico por ID
-  getById: (id: number) => api.get<PhysicalControlEntry>(`inventory/physical-control/${id}/`),
+  getLocations: async () => api.get("physical-control/locations/"),
   
-  // Cria um novo registro (Entrada/Saída) usando FormData para suportar anexos
-  create: (data: PhysicalControlEntry) => {
+  createLocation: async (data: any) => 
+    api.post("physical-control/locations/", data),
+    
+  updateLocation: async (id: number, data: any) => 
+    api.put(`physical-control/locations/${id}/`, data),
+  
+  deleteLocation: async (id: number) => 
+    api.delete(`physical-control/locations/${id}/`),
+
+  // ==========================================
+  // REGISTROS (PHYSICAL CONTROL)
+  // ==========================================
+  
+  getAll: async () => api.get("physical-control/items/"),
+  
+  /**
+   * Criação em lote (Batch) enviando FormData para suportar arquivos.
+   */
+  createBatch: async (data: any) => {
     const formData = new FormData();
     
-    // Adiciona campos básicos (Removidos campos inexistentes no backend)
-    formData.append("product", String(data.product));
-    formData.append("quantity", String(data.quantity));
-    formData.append("location", String(data.location));
-    formData.append("action_type", data.action_type);
-    
-    if (data.notes) {
-      formData.append("notes", data.notes);
-    }
+    // Dados do cabeçalho da NF
+    formData.append("nf_number", data.nf_number);
+    formData.append("receipt_date", data.receipt_date);
+    formData.append("sender", data.sender);
+    formData.append("general_notes", data.general_notes);
+    if (data.nf_file) formData.append("nf_file", data.nf_file);
 
-    // Adiciona múltiplos arquivos se houver
-    if (data.attachments && data.attachments instanceof FileList) {
-      Array.from(data.attachments).forEach((file) => {
-        formData.append("uploaded_attachments", file);
-      });
-    }
+    // Itens do lote
+    data.items.forEach((item: any, index: number) => {
+      const p = `items[${index}]`;
+      formData.append(`${p}[product]`, item.product);
+      formData.append(`${p}[quantity]`, item.quantity.toString());
+      formData.append(`${p}[location]`, item.location.toString());
+      formData.append(`${p}[notes]`, item.notes || "");
+      
+      if (item.photo_top) formData.append(`${p}[photo_top]`, item.photo_top);
+      if (item.photo_front) formData.append(`${p}[photo_front]`, item.photo_front);
+      if (item.photo_side) formData.append(`${p}[photo_side]`, item.photo_side);
+      if (item.photo_iso) formData.append(`${p}[photo_iso]`, item.photo_iso);
+    });
 
-    return api.post<PhysicalControlEntry>("inventory/physical-control/", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+    return api.post("physical-control/items/create-batch/", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
   },
-  
-  // Atualiza um registro existente
-  update: (id: number, data: Partial<PhysicalControlEntry>) => {
-    // Para PATCH com arquivos, também é recomendado usar FormData se for alterar anexos
-    return api.patch<PhysicalControlEntry>(`inventory/physical-control/${id}/`, data);
+
+  /**
+   * Atualiza um item individual (utilizado pelo PhysicalDetailsModal).
+   * Note a barra final '/' - O Django a exige para métodos PATCH/PUT.
+   */
+  updateItem: async (id: number, data: any) => {
+    return api.patch(`physical-control/items/${id}/`, data);
   },
-  
-  // Remove um registro do sistema
-  delete: (id: number) => api.delete(`inventory/physical-control/${id}/`),
+
+  /**
+   * Remove um registro permanentemente.
+   */
+  deleteItem: async (id: number) => 
+    api.delete(`physical-control/items/${id}/`),
 };

@@ -60,7 +60,7 @@ export function SidebarUserMenu({
 
       {showUserMenu && (
         <div className={cn(
-          "absolute bottom-full mb-2 bg-popover rounded-2xl shadow-2xl border border-border overflow-hidden p-4 space-y-4 z-50 animate-in fade-in slide-in-from-bottom-2",
+          "absolute bottom-full mb-2 bg-sidebar rounded-2xl shadow-2xl border sidebar-border overflow-hidden p-4 space-y-4 z-50 animate-in fade-in slide-in-from-bottom-2",
           isCollapsed ? "left-16 w-60" : "left-3 right-3"
         )}>
           {/* Seção de Cores */}

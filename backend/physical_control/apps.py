@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class DrawingsConfig(AppConfig):
+class PhysicalControlConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'drawings'
+    name = 'physical_control'

@@ -1,21 +1,19 @@
-# Usa uma imagem leve do Node.js
+# frontend/Dockerfile
 FROM node:20-slim
 
-# Define o diretório de trabalho dentro do container
 WORKDIR /app
 
-# Copia os arquivos de configuração de pacotes
+# Copia apenas os arquivos de dependências primeiro (otimiza cache do Docker)
 COPY package*.json ./
 
-# Instala as dependências
+# Instala as dependências (em dev, npm install é suficiente)
 RUN npm install
 
-# Copia todo o código do frontend para o container
+# Copia o restante do código
 COPY . .
 
-# Expõe a porta padrão que o Vite utiliza
+# Expõe a porta do Vite
 EXPOSE 5173
 
-# Comando para rodar o servidor de desenvolvimento do Vite
-# O parâmetro --host é crucial para que o Docker consiga acessar o servidor
+# O parâmetro --host é passado via docker-compose, mas deixamos aqui como fallback
 CMD ["npm", "run", "dev", "--", "--host"]

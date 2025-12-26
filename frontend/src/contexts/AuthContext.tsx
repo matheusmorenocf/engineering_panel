@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import api from "@/libs/api";
 
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("@App:user");
     localStorage.removeItem("@App:token");
     localStorage.removeItem("@App:refresh");
-    delete api.defaults.headers.Authorization;
+    delete api.defaults.headers.common['Authorization'];
   }, []);
 
   const fetchUserProfile = useCallback(async () => {

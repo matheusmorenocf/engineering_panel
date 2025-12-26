@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { adminService } from "@/services/adminService";
@@ -98,21 +99,22 @@ export default function Drawings() {
               value={stage.id} 
               className="h-full m-0 focus-visible:ring-0 outline-none"
             >
-              {stage.id === "management" && isOperational ? (
+              {/* Se for a aba de gestão e estiver operacional OU for Admin */}
+              {stage.id === "management" && (isOperational || isAdmin) ? (
                 <ManagementModule 
                   data={MOCK_DATA} 
                   onAddNew={() => setIsManualModalOpen(true)} 
                   onCardClick={handleCardClick}
                 />
               ) : !isOperational && !isAdmin ? (
-                /* Caso esteja bloqueado pelo Admin */
+                /* Se não estiver operacional e NÃO for Admin, mostra Manutenção */
                 <StageStatusPlaceholder 
                   title={stage.label} 
                   type="maintenance" 
                   onBack={() => setActiveTab("management")}
                 />
               ) : (
-                /* Caso esteja liberado mas ainda em desenvolvimento */
+                /* Caso esteja liberado/Admin mas ainda em desenvolvimento */
                 <StageStatusPlaceholder 
                   title={stage.label} 
                   type="development" 
