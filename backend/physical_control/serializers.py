@@ -35,10 +35,8 @@ class ItemProcessingSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_responsible_name(self, obj):
-        try:
-            user = obj.item.current_responsible
-            return user.get_full_name() or user.username
-        except: return "N/A"
+        user = obj.item.current_responsible
+        return user.get_full_name() or user.username
 
 class PhysicalControlSerializer(serializers.ModelSerializer):
     location_name = serializers.ReadOnlyField(source='location.name')
@@ -51,17 +49,13 @@ class PhysicalControlSerializer(serializers.ModelSerializer):
         read_only_fields = ['control_id', 'created_at', 'movement_history']
 
     def get_responsible_name(self, obj):
-        try:
-            return obj.current_responsible.get_full_name() or obj.current_responsible.username
-        except: return "N/A"
+        return obj.current_responsible.get_full_name() or obj.current_responsible.username
 
     def get_processing(self, obj):
-        # Proteção contra erros de carregamento de triagem
         try:
-            if hasattr(obj, 'processing'):
-                return {'id': obj.processing.id}
-        except: pass
-        return None
+            return {'id': obj.processing.id}
+        except:
+            return None
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)

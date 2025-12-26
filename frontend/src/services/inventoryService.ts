@@ -2,6 +2,24 @@
 import api from "../libs/api";
 
 export const inventoryService = {
+  // =========================
+  // Physical Control - Items
+  // =========================
+  getAll: async (params?: any) => api.get("physical-control/items/", { params }),
+  updateItem: async (id: number, data: any) => api.patch(`physical-control/items/${id}/`, data),
+  deleteItem: async (id: number) => api.delete(`physical-control/items/${id}/`),
+
+  // =========================
+  // Physical Control - Locations
+  // =========================
+  getLocations: async (params?: any) => api.get("physical-control/locations/", { params }),
+  createLocation: async (data: any) => api.post("physical-control/locations/", data),
+  updateLocation: async (id: number, data: any) => api.patch(`physical-control/locations/${id}/`, data),
+  deleteLocation: async (id: number) => api.delete(`physical-control/locations/${id}/`),
+
+  // =========================
+  // Physical Control - Batch create
+  // =========================
   createBatch: async (data: any) => {
     const formData = new FormData();
     formData.append("nf_number", data.nf_number || "S/NF");
@@ -23,9 +41,17 @@ export const inventoryService = {
       if (item.photo_iso) formData.append(`${p}[photo_iso]`, item.photo_iso);
     });
 
-    return api.post("physical-control/items/create-batch/", formData);
+    // Seu api.ts seta Content-Type JSON por default; pra upload precisa multipart
+    return api.post("physical-control/items/create-batch/", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
   },
-  updateItemProcessing: async (id: number, data: any) => 
+
+  // =========================
+  // Technical Processing (Triagem)
+  // =========================
+  getProcessingQueue: async (params?: any) => api.get("physical-control/processing/", { params }),
+  updateItemProcessing: async (id: number, data: any) =>
     api.patch(`physical-control/processing/${id}/`, data),
   getSingleProcessing: async (id: number) => api.get(`physical-control/processing/${id}/`),
 };

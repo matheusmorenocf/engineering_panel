@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-# 1. FUNÇÕES DE APOIO (Devem vir antes de tudo)
+# --- FUNÇÕES DE AUXÍLIO (Devem vir antes das Classes) ---
 def sanitize_path(text):
     return str(text).replace('/', '-').replace('\\', '-').replace(' ', '_')
 
@@ -17,11 +17,12 @@ def get_photo_upload_path(instance, filename):
     safe_nf = sanitize_path(instance.nf_number)
     return os.path.join('physical_control', f'NF_{safe_nf}', instance.control_id, filename)
 
-# 2. MODELOS
+# --- MODELOS ---
 class Location(models.Model):
     name = models.CharField(max_length=100, unique=True)
     responsibles = models.ManyToManyField(User, related_name='managed_locations')
-    def __str__(self): return self.name
+    def __str__(self):
+        return self.name
 
 class PhysicalControl(models.Model):
     control_id = models.CharField(max_length=25, unique=True, editable=False)
@@ -65,7 +66,8 @@ class PhysicalControl(models.Model):
                         'responsible': friendly_name,
                         'action': 'Location Transfer'
                     })
-            except: pass
+            except PhysicalControl.DoesNotExist:
+                pass
         super().save(*args, **kwargs)
 
     def generate_id(self):
@@ -90,9 +92,5 @@ def create_item_processing(sender, instance, created, **kwargs):
     if created:
         ItemProcessing.objects.get_or_create(
             item=instance,
-            defaults={
-                'control_id': instance.control_id,
-                'nf_number': instance.nf_number,
-                'sender': instance.sender
-            }
+            defaults={'control_id': instance.control_id, 'nf_number': instance.nf_number, 'sender': instance.sender}
         )
