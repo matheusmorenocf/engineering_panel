@@ -1,24 +1,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useMemo, useEffect } from "react";
-import { Plus, Search, MapPin, LayoutGrid, List, Columns, Building2, FileText, Eye, RefreshCw, Settings, Image as ImageIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { PhysicalEntryForm } from "@/components/physical/PhysicalEntryForm";
 import { PhysicalDetailsModal } from "@/components/physical/PhysicalDetailsModal";
 import { LocationManagerModal } from "@/components/physical/LocationManagerModal";
 import { inventoryService } from "@/services/inventoryService";
 import { useToastContext } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn } from "@/libs/utils";
+
+// Novos Componentes
+import { PhysicalHeader } from "@/components/physical/PhysicalHeader";
+import { PhysicalControls } from "@/components/physical/PhysicalControls";
+import { PhysicalWarehouseMap } from "@/components/physical/PhysicalWarehouseMap";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { MapPin, FileText, ImageIcon, Eye } from "lucide-react";
 
 export default function PhysicalControl() {
   const { addToast } = useToastContext();
   const { user } = useAuth();
-  const [viewMode, setViewMode] = useState<"grouped" | "kanban">("grouped");
+  const [viewMode, setViewMode] = useState<"grouped" | "kanban" | "map">("grouped");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLocationMgrOpen, setIsLocationMgrOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -42,14 +44,14 @@ export default function PhysicalControl() {
 
   useEffect(() => { fetchItems(); }, []);
 
-const filteredItems = useMemo(() => {
+  const filteredItems = useMemo(() => {
     const term = search.toLowerCase();
     return items.filter(item => 
       String(item.product).toLowerCase().includes(term) ||
       (item.nf_number || "").toLowerCase().includes(term) ||
-      (item.control_id || "").toLowerCase().includes(term) // Mudado de tracking_code para control_id
+      (item.control_id || "").toLowerCase().includes(term)
     );
-}, [items, search]);
+  }, [items, search]);
 
   const groupedByNF = useMemo(() => {
     return filteredItems.reduce((acc: any, item) => {
@@ -69,49 +71,49 @@ const filteredItems = useMemo(() => {
     }, {});
   }, [filteredItems]);
 
+  const warehouseMap = useMemo(() => {
+    const map: any = {};
+    filteredItems.forEach(item => {
+      if (!item.physical_location) return;
+      const parts = item.physical_location.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+      let closet, shelf, slot;
+      if (parts.length >= 4 && parts[0].toLowerCase().includes("armario")) {
+        closet = parts[1]; shelf = parts[2]; slot = parts[3].toUpperCase();
+      } else if (parts.length >= 3) {
+        closet = parts[0]; shelf = parts[1]; slot = parts[2].toUpperCase();
+      } else return;
+      if (!map[closet]) map[closet] = {};
+      if (!map[closet][shelf]) map[closet][shelf] = {};
+      if (!map[closet][shelf][slot]) map[closet][shelf][slot] = [];
+      map[closet][shelf][slot].push(item);
+    });
+    return map;
+  }, [filteredItems]);
+
   return (
-    <div className="p-6 space-y-6 flex flex-col h-screen bg-background">
-      <div className="flex justify-between items-center shrink-0">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight uppercase">Controle Físico</h1>
-          <p className="text-muted-foreground text-sm font-medium">Gestão de endereçamento e rastreabilidade.</p>
-        </div>
-        <Button onClick={() => setIsFormOpen(true)} className="gradient-brand gap-2 font-bold h-11 px-6 shadow-glow">
-          <Plus className="h-5 w-5" /> Nova Entrada Física
-        </Button>
-      </div>
-
-      <div className="flex gap-4 items-center bg-card p-4 rounded-xl border shadow-sm shrink-0">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por Produto, NF ou ID..." className="pl-10 h-11 bg-background" value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className={cn("h-11 w-11", isRefreshing && "animate-spin")} onClick={fetchItems}>
-            <RefreshCw className="h-5 w-5" />
-          </Button>
-          {(user?.isStaff || user?.isSuperuser) && (
-            <Button variant="outline" size="icon" className="h-11 w-11 border-primary/20 text-primary" onClick={() => setIsLocationMgrOpen(true)}>
-              <Settings className="h-5 w-5" />
-            </Button>
-          )}
-          <div className="flex bg-muted p-1 rounded-lg border ml-2">
-            <Button variant={viewMode === "grouped" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("grouped")}><LayoutGrid className="h-4 w-4" /></Button>
-            <Button variant={viewMode === "kanban" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("kanban")}><Columns className="h-4 w-4" /></Button>
-          </div>
-        </div>
-      </div>
+    <div className="p-6 space-y-6 flex flex-col h-screen bg-background text-foreground">
+      <PhysicalHeader onOpenForm={() => setIsFormOpen(true)} />
+      
+      <PhysicalControls 
+        search={search}
+        setSearch={setSearch}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        isRefreshing={isRefreshing}
+        onRefresh={fetchItems}
+        onOpenLocationMgr={() => setIsLocationMgrOpen(true)}
+        showAdminActions={!!(user?.isStaff || user?.isSuperuser)}
+      />
 
       <div className="flex-1 overflow-auto custom-scrollbar pr-2">
+        {viewMode === "map" && <PhysicalWarehouseMap warehouseMap={warehouseMap} onSelectItem={setSelectedItem} />}
+
         {viewMode === "kanban" && (
           <div className="flex gap-6 h-full pb-4 overflow-x-auto custom-scrollbar">
             {Object.entries(kanbanColumns).map(([location, products]: any) => (
               <div key={location} className="w-80 flex-shrink-0 flex flex-col gap-4">
                 <div className="flex items-center justify-between px-2">
-                  <h3 className="text-xs font-black uppercase flex items-center gap-2 tracking-widest">
-                    <MapPin className="h-4 w-4 text-primary" /> {location}
-                  </h3>
+                  <h3 className="text-xs font-black uppercase flex items-center gap-2 tracking-widest"><MapPin className="h-4 w-4 text-primary" /> {location}</h3>
                   <Badge variant="secondary" className="font-black">{products.length}</Badge>
                 </div>
                 <div className="flex-1 space-y-4 p-4 rounded-2xl bg-muted/30 border border-dashed overflow-y-auto max-h-[60vh] custom-scrollbar">

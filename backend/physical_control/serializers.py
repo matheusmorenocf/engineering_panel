@@ -56,10 +56,30 @@ class PhysicalControlSerializer(serializers.ModelSerializer):
             return {'id': obj.processing.id}
         except:
             return None
+    def get_map_coordinates(self, obj):
+        """
+        Converte "Armario 1-2-B" em { closet: 1, shelf: 2, slot: 'B' }
+        """
+        if not obj.physical_location:
+            return None
+        try:
+            # Tira a palavra "Armario" e separa pelos hífens
+            clean_loc = obj.physical_location.upper().replace('ARMARIO', '').strip()
+            parts = clean_loc.split('-')
+            if len(parts) >= 3:
+                return {
+                    'closet': parts[0].strip(),
+                    'shelf': parts[1].strip(),
+                    'slot': parts[2].strip()
+                }
+        except:
+            pass
+        return None
 
-    def to_representation(self, instance):
+def to_representation(self, instance):
         rep = super().to_representation(instance)
+        # Padroniza para maiúsculas para o filtro do mapa ser exato
+        rep['physical_location'] = (instance.physical_location or "").strip().upper()
         rep['nf_notes'] = instance.nf_notes or ""
         rep['item_notes'] = instance.item_notes or ""
-        rep['physical_location'] = instance.physical_location or ""
         return rep
