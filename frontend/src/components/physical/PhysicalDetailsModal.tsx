@@ -45,6 +45,7 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [locations, setLocations] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]); // Adicionado estado para usuários
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
@@ -53,6 +54,7 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
   const [localItem, setLocalItem] = useState<any>(item);
   const [editData, setEditData] = useState({
     location: "",
+    current_responsible: "", // Adicionado responsável ao editData
     notes: "",
   });
 
@@ -61,12 +63,19 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
       setLocalItem(item);
       setEditData({
         location: String(item.location || ""),
+        current_responsible: String(item.current_responsible || ""), // Sincroniza responsável
         notes: item.item_notes || "",
       });
       setIsEditing(false);
 
+      // Carrega localizações
       api.get("physical-control/locations/").then(res => {
         setLocations(Array.isArray(res.data) ? res.data : res.data?.results || []);
+      });
+
+      // Carrega usuários para o select de responsável
+      api.get("physical-control/users/").then(res => {
+        setUsers(res.data || []);
       });
     }
   }, [item]);
@@ -91,6 +100,7 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
     try {
       const response = await inventoryService.updateItem(localItem.id, {
         location: editData.location,
+        current_responsible: editData.current_responsible, // Envia novo responsável
         item_notes: editData.notes,
       });
       
@@ -185,7 +195,16 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Responsável Atual</p>
-                  <p className="font-bold text-foreground flex items-center gap-2 text-sm uppercase"><User className="h-4 w-4 opacity-40" /> {localItem.responsible_name}</p>
+                  {isEditing ? (
+                    <Select value={editData.current_responsible} onValueChange={(val) => setEditData({ ...editData, current_responsible: val })}>
+                      <SelectTrigger className="bg-background mt-2"><SelectValue placeholder="Selecione o responsável" /></SelectTrigger>
+                      <SelectContent className="z-[100]">
+                        {users.map((u) => <SelectItem key={u.id} value={String(u.id)}>{u.full_name || u.username}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="font-bold text-foreground flex items-center gap-2 text-sm uppercase"><User className="h-4 w-4 opacity-40" /> {localItem.responsible_name}</p>
+                  )}
                 </div>
               </div>
 
