@@ -25,6 +25,7 @@ export const inventoryService = {
     formData.append("nf_number", data.nf_number || "S/NF");
     formData.append("receipt_date", data.receipt_date);
     formData.append("sender", data.sender);
+    formData.append("customer", data.customer || ""); // Adicionado para persistência do cliente
     formData.append("general_notes", data.general_notes);
     if (data.nf_file) formData.append("nf_file", data.nf_file);
 

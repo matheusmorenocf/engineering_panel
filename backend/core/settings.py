@@ -38,7 +38,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -89,3 +89,10 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Caminho para os arquivos do Google
+GOOGLE_CREDENTIALS_FILE = os.path.join(BASE_DIR, 'credentials.json')
+GOOGLE_TOKEN_FILE = os.path.join(BASE_DIR, 'token.pickle')
+
+# URL que o Google redirecionará após o login (ajuste conforme seu domínio)
+GOOGLE_OAUTH_REDIRECT_URI = "http://localhost:8000/api/notifications/callback/"

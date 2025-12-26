@@ -24,11 +24,10 @@ services:
     volumes:
       - ./backend:/app
       - backend_static:/app/static
-      # Removido backend_media nomeado para usar apenas o bind mount do seu disco local
-      # Isso garante que você veja a pasta 'physical_control' direto no seu D:/produtos
       - d:\industry_suit:/app/media
     ports:
       - "8000:8000"
+      - "8080:8080"  # ADICIONADO: Necessário para a autenticação do Google
     environment:
       DJANGO_ENV: dev
       DJANGO_DEBUG: "1"
@@ -65,7 +64,6 @@ services:
 volumes:
   postgres_data:
   backend_static:
-  # Removido backend_media daqui pois estamos usando um caminho absoluto (/d/produtos)
 
 networks:
   painel_network:

@@ -37,7 +37,8 @@ import {
   Loader2,
   Link as LinkIcon,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Briefcase
 } from "lucide-react";
 import { inventoryService } from "@/services/inventoryService";
 import { useToastContext } from "@/contexts/ToastContext";
@@ -59,18 +60,32 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
   const [localItem, setLocalItem] = useState<any>(item);
   const [editData, setEditData] = useState({
     location: "",
+    selected_closet: "",
+    row: "",
+    column: "",
     physical_location: "",
     current_responsible: "",
+    customer: "", 
     notes: "",
   });
 
   useEffect(() => {
     if (item) {
       setLocalItem(item);
+      
+      const parts = item.physical_location?.split('-').map((s: string) => s.trim()) || [];
+      const closet = parts[0] || "";
+      const row = parts[1] || "";
+      const col = parts[2] || "";
+
       setEditData({
         location: String(item.location || ""),
+        selected_closet: closet,
+        row: row,
+        column: col,
         physical_location: item.physical_location || "",
         current_responsible: String(item.current_responsible || ""), 
+        customer: item.customer || "", 
         notes: item.item_notes || "",
       });
       setIsEditing(false);
@@ -84,6 +99,24 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
       });
     }
   }, [item]);
+
+  // Sincroniza a string final de localização física
+  useEffect(() => {
+    if (isEditing) {
+      // CORREÇÃO: Se não houver armário, linha ou coluna, a localização física deve ser limpa
+      if (editData.selected_closet && editData.row && editData.column) {
+        setEditData(prev => ({
+          ...prev,
+          physical_location: `${prev.selected_closet}-${prev.row}-${prev.column.toUpperCase()}`
+        }));
+      } else {
+        setEditData(prev => ({
+          ...prev,
+          physical_location: "" // Fica em branco se a estrutura for parcial ou inexistente
+        }));
+      }
+    }
+  }, [editData.selected_closet, editData.row, editData.column, isEditing]);
 
   const confirmDelete = async () => {
     setLoading(true);
@@ -106,7 +139,8 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
       const response = await inventoryService.updateItem(localItem.id, {
         location: editData.location,
         physical_location: editData.physical_location,
-        current_responsible: editData.current_responsible, 
+        current_responsible: editData.current_responsible,
+        customer: editData.customer, 
         item_notes: editData.notes,
       });
       
@@ -122,7 +156,6 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
     }
   };
 
-  // --- CORREÇÃO: Pega o ID da triagem técnica (ItemProcessing) ---
   const processingId = localItem?.processing?.id || localItem?.processing;
   const triagemUrl = `${window.location.origin}/triagem/${processingId}`;
 
@@ -136,6 +169,9 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
   };
 
   if (!localItem) return null;
+
+  const selectedLoc = locations.find(l => String(l.id) === editData.location);
+  const availableClosets = selectedLoc?.physical_structure || [];
 
   return (
     <>
@@ -202,8 +238,8 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Depósito / Área</p>
                   {isEditing ? (
-                    <Select value={editData.location} onValueChange={(val) => setEditData({ ...editData, location: val })}>
-                      <SelectTrigger className="bg-background mt-2"><SelectValue placeholder="Selecione o local" /></SelectTrigger>
+                    <Select value={editData.location} onValueChange={(val) => setEditData({ ...editData, location: val, selected_closet: "", row: "", column: "" })}>
+                      <SelectTrigger className="bg-background mt-2 h-10"><SelectValue placeholder="Selecione o local" /></SelectTrigger>
                       <SelectContent className="z-[100]">
                         {locations.map((loc) => <SelectItem key={loc.id} value={String(loc.id)}>{loc.name}</SelectItem>)}
                       </SelectContent>
@@ -213,17 +249,37 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
                   )}
                 </div>
 
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Localização Física (Específica)</p>
+                <div className="space-y-3">
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Localização Física</p>
                   {isEditing ? (
-                    <Input 
-                      className="bg-background mt-2"
-                      placeholder="Ex: Armário 1-B" 
-                      value={editData.physical_location} 
-                      onChange={(e) => setEditData({ ...editData, physical_location: e.target.value })} 
-                    />
+                    <div className="space-y-2 mt-2">
+                      <Select value={editData.selected_closet} onValueChange={(val) => setEditData({ ...editData, selected_closet: val })}>
+                        <SelectTrigger className="bg-background h-10"><SelectValue placeholder="Estrutura (Armário/Mesa)" /></SelectTrigger>
+                        <SelectContent className="z-[100]">
+                          {availableClosets.map((c: any) => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input placeholder="Linha" type="number" value={editData.row} onChange={(e) => setEditData({ ...editData, row: e.target.value })} className="bg-background h-10" />
+                        <Input placeholder="Col" maxLength={1} className="uppercase bg-background h-10" value={editData.column} onChange={(e) => setEditData({ ...editData, column: e.target.value })} />
+                      </div>
+                    </div>
                   ) : (
                     <p className="font-bold text-foreground flex items-center gap-2 text-sm uppercase"><MapPinned className="h-4 w-4 opacity-40" /> {localItem.physical_location || "NÃO INFORMADA"}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Cliente</p>
+                  {isEditing ? (
+                    <Input 
+                      placeholder="Nome do Cliente" 
+                      value={editData.customer} 
+                      onChange={(e) => setEditData({ ...editData, customer: e.target.value })} 
+                      className="bg-background mt-2 h-10" 
+                    />
+                  ) : (
+                    <p className="font-bold text-foreground flex items-center gap-2 text-sm uppercase"><Briefcase className="h-4 w-4 opacity-40" /> {localItem.customer || "CONSUMIDOR FINAL"}</p>
                   )}
                 </div>
 
@@ -231,7 +287,7 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
                   <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Responsável Atual</p>
                   {isEditing ? (
                     <Select value={editData.current_responsible} onValueChange={(val) => setEditData({ ...editData, current_responsible: val })}>
-                      <SelectTrigger className="bg-background mt-2"><SelectValue placeholder="Selecione o responsável" /></SelectTrigger>
+                      <SelectTrigger className="bg-background mt-2 h-10"><SelectValue placeholder="Selecione o responsável" /></SelectTrigger>
                       <SelectContent className="z-[100]">
                         {users.map((u) => <SelectItem key={u.id} value={String(u.id)}>{u.full_name || u.username}</SelectItem>)}
                       </SelectContent>
@@ -254,6 +310,7 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
                 <h4 className="text-[10px] font-black uppercase flex items-center gap-2 tracking-[0.2em] text-foreground"><FileText className="h-4 w-4 text-primary" /> Observações</h4>
                 {isEditing ? (
                   <div className="space-y-4">
+                    <OpenDialogInvisbleTrigger />
                     <Textarea 
                       value={editData.notes} 
                       onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
@@ -273,7 +330,6 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
                 )}
               </div>
 
-              {/* Seção do Link de Triagem corrigida */}
               <div className="space-y-3 p-5 rounded-2xl border border-dashed bg-muted/10">
                 <h4 className="text-[10px] font-black uppercase flex items-center gap-2 tracking-[0.2em] text-foreground">
                   <LinkIcon className="h-4 w-4 text-primary" /> Link de Triagem Técnica
@@ -293,7 +349,6 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
                     </a>
                   </Button>
                 </div>
-                <p className="text-[9px] font-bold text-muted-foreground uppercase">Compartilhe este link com o técnico para preenchimento do formulário.</p>
               </div>
 
               {!isEditing && (
@@ -320,18 +375,12 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
         </DialogContent>
       </Dialog>
 
-      {/* Preview de Imagem (Lightbox) */}
       <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-transparent border-none flex items-center justify-center z-[110] outline-none">
           <DialogTitle className="sr-only">Visualização de Imagem</DialogTitle>
           <div className="relative">
             <img src={previewImage!} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" alt="Preview" />
-            <Button 
-              onClick={() => setPreviewImage(null)}
-              variant="destructive"
-              size="icon"
-              className="absolute top-4 right-4 rounded-full shadow-2xl z-[120] h-10 w-10 border-2 border-white/20"
-            >
+            <Button onClick={() => setPreviewImage(null)} variant="destructive" size="icon" className="absolute top-4 right-4 rounded-full h-10 w-10 border-2 border-white/20 z-[120]">
               <X className="h-6 w-6" />
             </Button>
           </div>
@@ -360,15 +409,12 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
           <AlertDialogHeader>
             <AlertDialogTitle className="uppercase font-black">Aplicar Alterações?</AlertDialogTitle>
             <AlertDialogDescription>
-              Uma nova entrada será registrada no histórico com a nova localização e observações.
+              Uma nova entrada será registrada no histórico com as alterações realizadas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="font-bold">Revisar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmSave} 
-              className="gradient-brand text-white font-bold"
-            >
+            <AlertDialogAction onClick={confirmSave} className="gradient-brand text-white font-bold">
               Confirmar e Salvar
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -376,4 +422,9 @@ export function PhysicalDetailsModal({ item, onClose, onRefresh }: { item: any; 
       </AlertDialog>
     </>
   );
+}
+
+// Helper component to avoid potential dialog focus issues
+function OpenDialogInvisbleTrigger() {
+  return <div className="sr-only" />;
 }

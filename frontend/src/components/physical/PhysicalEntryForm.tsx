@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, Camera, Upload, FileText, X, MapPinned } from "lucide-react";
+import { Plus, Trash2, Camera, Upload, FileText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,12 +72,15 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
     nf_number: "",
     receipt_date: new Date().toISOString().split('T')[0],
     sender: "",
+    customer: "", // Campo Cliente
     general_notes: "",
     nf_file: null as File | null
   });
 
   const [items, setItems] = useState<any[]>([{
-    id: '1', product: '', quantity: 1, location: '', physical_location: '', notes: '',
+    id: '1', product: '', quantity: 1, location: '', 
+    selected_closet: '', row: '', column: '', 
+    physical_location: '', notes: '',
     photo_top: null, photo_front: null, photo_side: null, photo_iso: null
   }]);
 
@@ -91,6 +94,20 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
   const updateItem = (index: number, field: string, value: any) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
+    
+    if (['selected_closet', 'row', 'column'].includes(field)) {
+      const current = newItems[index];
+      const closet = field === 'selected_closet' ? value : current.selected_closet;
+      const row = field === 'row' ? value : current.row;
+      const col = field === 'column' ? value : current.column;
+      
+      if (closet && row && col) {
+        newItems[index].physical_location = `${closet}-${row}-${col.toUpperCase()}`;
+      } else {
+        newItems[index].physical_location = closet || '';
+      }
+    }
+
     setItems(newItems);
   };
 
@@ -100,11 +117,18 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
     
     setLoading(true);
     try {
-      await inventoryService.createBatch({ 
-        ...header, 
-        nf_number: finalNfNumber, 
-        items 
-      } as BatchEntryPayload);
+      // Garantindo que todos os campos do header, incluindo customer, sejam enviados
+      const payload: BatchEntryPayload = {
+        nf_number: finalNfNumber,
+        receipt_date: header.receipt_date,
+        sender: header.sender,
+        customer: header.customer, // Explicitamente adicionado para segurança
+        general_notes: header.general_notes,
+        nf_file: header.nf_file,
+        items: items
+      };
+
+      await inventoryService.createBatch(payload);
       addToast("Entrada registrada com sucesso!", "success");
       onSuccess();
     } catch { 
@@ -120,7 +144,7 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
         <h3 className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
           <FileText className="w-3 h-3" /> Dados do Recebimento (NF Opcional)
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-1.5">
             <Label className="text-[10px] uppercase font-bold opacity-70">Número da NF</Label>
             <Input placeholder="S/NF" value={header.nf_number} onChange={e => setHeader({...header, nf_number: e.target.value})} />
@@ -128,6 +152,14 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
           <div className="space-y-1.5">
             <Label className="text-[10px] uppercase font-bold opacity-70">Data Recebimento</Label>
             <Input type="date" value={header.receipt_date} onChange={e => setHeader({...header, receipt_date: e.target.value})} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase font-bold opacity-70">Cliente (Opcional)</Label>
+            <Input 
+              placeholder="Nome do Cliente" 
+              value={header.customer} 
+              onChange={e => setHeader({...header, customer: e.target.value})} 
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-[10px] uppercase font-bold opacity-70">Anexo NF</Label>
@@ -141,64 +173,110 @@ export function PhysicalEntryForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       <div className="space-y-4">
-        {items.map((item, index) => (
-          <div key={item.id} className="border rounded-2xl p-5 bg-card shadow-sm space-y-4 animate-in fade-in slide-in-from-bottom-2">
-            <div className="flex justify-between items-center pb-2 border-b border-dashed">
-              <span className="text-[10px] font-black uppercase text-primary tracking-widest">Item {index + 1}</span>
-              {items.length > 1 && (
-                <Button type="button" variant="ghost" onClick={() => setItems(items.filter((_, i) => i !== index))} className="text-destructive h-6 px-2 text-[10px] uppercase font-black hover:bg-destructive/10">
-                  <Trash2 className="h-3 w-3 mr-1" /> Remover
-                </Button>
-              )}
-            </div>
+        {items.map((item, index) => {
+          const selectedLoc = locations.find(l => String(l.id) === item.location);
+          const availableClosets = selectedLoc?.physical_structure || [];
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold opacity-70">Produto (Código/ID)</Label><Input value={item.product} onChange={e => updateItem(index, 'product', e.target.value)} required /></div>
-              <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold opacity-70">Qtd</Label><Input type="number" min="1" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} required /></div>
-              <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase font-bold opacity-70">Depósito/Local</Label>
-                <Select value={item.location} onValueChange={v => updateItem(index, 'location', v)} required>
-                  <SelectTrigger className="h-10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent className="z-[9999]">{locations.map(l => <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>)}</SelectContent>
-                </Select>
+          return (
+            <div key={item.id} className="border rounded-2xl p-5 bg-card shadow-sm space-y-4 animate-in fade-in slide-in-from-bottom-2">
+              <div className="flex justify-between items-center pb-2 border-b border-dashed">
+                <span className="text-[10px] font-black uppercase text-primary tracking-widest">Item {index + 1}</span>
+                {items.length > 1 && (
+                  <Button type="button" variant="ghost" onClick={() => setItems(items.filter((_, i) => i !== index))} className="text-destructive h-6 px-2 text-[10px] uppercase font-black hover:bg-destructive/10">
+                    <Trash2 className="h-3 w-3 mr-1" /> Remover
+                  </Button>
+                )}
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase font-bold opacity-70">Localização Física</Label>
-                <Input placeholder="Ex: Armário 1-B" value={item.physical_location} onChange={e => updateItem(index, 'physical_location', e.target.value)} />
-              </div>
-            </div>
 
-            <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold opacity-70">Observação do Item</Label><Input placeholder="Avarias, detalhes..." value={item.notes} onChange={e => updateItem(index, 'notes', e.target.value)} /></div>
-            
-            <div className="space-y-3 pt-2">
-              <Label className="text-[9px] font-black uppercase flex items-center gap-2 text-primary tracking-tighter">
-                <Camera className="h-3 w-3" /> Fotos do Produto (4 Vistas Obrigatórias)
-              </Label>
-              <div className="grid grid-cols-4 gap-2">
-                {['Superior', 'Frontal', 'Lateral', 'Iso'].map((label, idx) => {
-                  const keys = ['photo_top', 'photo_front', 'photo_side', 'photo_iso'];
-                  return (
-                    <div key={label} className="space-y-1 flex flex-col">
-                      <span className="text-[7px] font-black uppercase text-center text-muted-foreground">{label}</span>
-                      <FileDropZone 
-                        file={item[keys[idx]]} 
-                        onChange={(f: any) => updateItem(index, keys[idx], f)} 
-                        heightClass="aspect-square h-auto w-full" 
-                      />
-                    </div>
-                  );
-                })}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold opacity-70">Produto (Código/ID)</Label><Input value={item.product} onChange={e => updateItem(index, 'product', e.target.value)} required /></div>
+                <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold opacity-70">Qtd</Label><Input type="number" min="1" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} required /></div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-bold opacity-70">Depósito/Local</Label>
+                  <Select value={item.location} onValueChange={v => updateItem(index, 'location', v)} required>
+                    <SelectTrigger className="h-10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent className="z-[9999]">{locations.map(l => <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-muted/20 p-3 rounded-xl border border-dashed">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-bold opacity-70">Armário / Volume</Label>
+                  <Select 
+                    disabled={!item.location} 
+                    value={item.selected_closet} 
+                    onValueChange={v => updateItem(index, 'selected_closet', v)}
+                  >
+                    <SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent className="z-[9999]">
+                      {availableClosets.map((c: any) => (
+                        <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-bold opacity-70">Linha</Label>
+                    <Input 
+                      type="number" 
+                      placeholder="0"
+                      value={item.row} 
+                      onChange={e => updateItem(index, 'row', e.target.value)} 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-bold opacity-70">Coluna</Label>
+                    <Input 
+                      placeholder="A, B..." 
+                      maxLength={1}
+                      className="uppercase"
+                      value={item.column} 
+                      onChange={e => updateItem(index, 'column', e.target.value)} 
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5 flex flex-col justify-end">
+                   <Label className="text-[10px] uppercase font-bold opacity-40 italic">Padrão do Sistema</Label>
+                   <div className="h-10 flex items-center px-3 bg-muted rounded border font-mono text-xs font-bold text-primary">
+                    {item.physical_location || "Selecione a posição..."}
+                   </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold opacity-70">Observação do Item</Label><Input placeholder="Avarias, detalhes..." value={item.notes} onChange={e => updateItem(index, 'notes', e.target.value)} /></div>
+              
+              <div className="space-y-3 pt-2">
+                <Label className="text-[9px] font-black uppercase flex items-center gap-2 text-primary tracking-tighter">
+                  <Camera className="h-3 w-3" /> Fotos do Produto (4 Vistas Obrigatórias)
+                </Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['Superior', 'Frontal', 'Lateral', 'Iso'].map((label, idx) => {
+                    const keys = ['photo_top', 'photo_front', 'photo_side', 'photo_iso'];
+                    return (
+                      <div key={label} className="space-y-1 flex flex-col">
+                        <span className="text-[7px] font-black uppercase text-center text-muted-foreground">{label}</span>
+                        <FileDropZone 
+                          file={item[keys[idx]]} 
+                          onChange={(f: any) => updateItem(index, keys[idx], f)} 
+                          heightClass="aspect-square h-auto w-full" 
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="fixed md:absolute bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-md border-t flex justify-between gap-4 z-30">
         <Button 
           type="button" 
           variant="outline" 
-          onClick={() => setItems([...items, { id: Math.random().toString(), product: '', quantity: 1, location: '', physical_location: '', notes: '', photo_top: null, photo_front: null, photo_side: null, photo_iso: null }])} 
+          onClick={() => setItems([...items, { id: Math.random().toString(), product: '', quantity: 1, location: '', selected_closet: '', row: '', column: '', physical_location: '', notes: '', photo_top: null, photo_front: null, photo_side: null, photo_iso: null }])} 
           className="font-black border-primary/20 text-primary uppercase text-[10px] h-11 tracking-widest bg-background"
         >
           <Plus className="w-4 h-4 mr-2" /> Item na mesma NF

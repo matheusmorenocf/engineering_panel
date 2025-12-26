@@ -33,3 +33,7 @@ gunicorn>=21.2
 SQLAlchemy>=2.0
 pillow
 django-cors-headers
+
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib

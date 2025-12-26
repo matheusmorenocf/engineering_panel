@@ -1,10 +1,12 @@
 from django.db import transaction
 from django.contrib.auth.models import User
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters # Importado filters
 from rest_framework.decorators import action, api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
+
+# Importe os modelos do seu arquivo models.py
 from .models import Location, PhysicalControl, ItemProcessing
 from .serializers import LocationSerializer, PhysicalControlSerializer, UserSimpleSerializer, ItemProcessingSerializer
 
@@ -17,6 +19,10 @@ class PhysicalControlViewSet(viewsets.ModelViewSet):
     queryset = PhysicalControl.objects.all().order_by('-created_at')
     serializer_class = PhysicalControlSerializer
     permission_classes = [IsAuthenticated]
+    
+    # ADICIONADO: Configuração para permitir busca via query params (?search=...)
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['product', 'customer', 'nf_number', 'control_id']
 
     @action(detail=False, methods=['POST'], url_path='create-batch')
     def create_batch(self, request):
@@ -26,10 +32,12 @@ class PhysicalControlViewSet(viewsets.ModelViewSet):
                     'nf_number': request.data.get('nf_number') or "S/NF",
                     'receipt_date': request.data.get('receipt_date'),
                     'sender': request.data.get('sender'),
+                    'customer': request.data.get('customer'), 
                     'nf_notes': request.data.get('general_notes'),
                     'nf_file': request.FILES.get('nf_file'),
                     'current_responsible': request.user
                 }
+                
                 index = 0
                 created_ids = []
                 while f'items[{index}][product]' in request.data:
